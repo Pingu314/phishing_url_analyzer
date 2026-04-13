@@ -177,10 +177,10 @@ class TestRiskScorer:
         assert "brand_impersonation" in result["breakdown"]
 
     def test_verdict_suspicious_range(self, scorer, clean_features, clean_intel):
-        features = {**clean_features, "suspicious_tld": True, "has_suspicious_keywords": True}
+        features = {**clean_features, "suspicious_tld": True, "has_suspicious_keywords": True, "uses_https": False}
         result = scorer.score(features, clean_intel)
         assert result["verdict"] == "SUSPICIOUS"
-
+        assert 21 <= result["score"] <= 49
 
 # ── Redirect Follower Tests (no network — unit test domain parsing only) ─────
 

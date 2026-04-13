@@ -1,9 +1,12 @@
+dist/
+.pytest_cache/
 __pycache__/
+reports/
+*.egg-info/
+.idea/
 *.pyc
 *.pyo
 .env
 config/config.json
-reports/
-*.egg-info/
-dist/
-.pytest_cache/
+
+
