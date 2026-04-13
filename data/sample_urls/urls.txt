@@ -1,0 +1,19 @@
+# Sample URLs for testing the Phishing URL Analyzer
+# Lines starting with # are ignored
+# Mix of benign, suspicious, and malicious-pattern URLs
+
+# --- Likely BENIGN ---
+https://www.google.com
+https://github.com/login
+https://postfinance.ch/en/private.html
+
+# --- SUSPICIOUS patterns ---
+http://paypal-secure-verify.com/login
+https://microsoft-account-update.xyz/verify?user=admin
+http://192.168.1.105/bank/login.php
+
+# --- High-risk / Malicious patterns ---
+http://paypa1.com/signin?redirect=http%3A%2F%2Fevil.com
+https://secure.apple.com.phishing-site.tk/id/verify
+http://185.220.101.55/payload/download.exe
+https://www.paypal.com.account-login.top/confirm?token=abc123%2F%2Fevil

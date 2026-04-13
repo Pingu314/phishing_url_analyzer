@@ -1,0 +1,4 @@
+# Phishing URL Analyzer - Dependencies
+# All stdlib except pytest for testing
+
+pytest>=7.0.0
