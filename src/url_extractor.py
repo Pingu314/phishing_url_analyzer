@@ -14,6 +14,7 @@ from settings import (
     SUSPICIOUS_KEYWORDS,
     SUSPICIOUS_TLDS,
     LEGITIMATE_TLDS,
+    HOMOGLYPH_MAP,
 )
 
 
@@ -53,8 +54,7 @@ class URLFeatureExtractor:
                     "subdomain_count": self._count_subdomains(domain),
                     "path_depth": len([p for p in path.split("/") if p]),
 
-                    # Entropy (randomness — high entropy = possible DGA domain)
-                    # Computed on the registered domain label (not www or IP)
+                    # Entropy (computed on the registered domain label, not www or IP)
                     "domain_entropy": self._shannon_entropy(self._registered_label(domain)),
 
                     # Special character features
@@ -74,6 +74,9 @@ class URLFeatureExtractor:
                     "suspicious_keywords_found": self._find_all_labels(url_lower, SUSPICIOUS_KEYWORDS),
                     "brand_impersonation": self._detect_brand_impersonation(domain),
                     "brand_found": self._find_brands_in_domain(domain),
+
+                    # Typosquatting / homoglyph detection
+                    "typosquatting": self._detect_typosquatting(domain),
 
                     # TLD analysis
                     "tld": self._get_tld(domain),
@@ -105,7 +108,7 @@ class URLFeatureExtractor:
 
     def _registered_label(self, domain: str) -> str:
         """Return the second-level label (e.g. 'google' from 'www.google.com').
-        Falls back to the first label for IPs or bare hostnames."""
+        Falls back sensibly for IPs or bare hostnames."""
         if self._is_ip(domain):
             return domain
         parts = [p for p in domain.split(".") if p]
@@ -132,7 +135,7 @@ class URLFeatureExtractor:
         return any(kw in text for kw in keywords)
 
     def _has_any_label(self, text: str, keywords: list) -> bool:
-        """Match keywords as whole path/query tokens (word-boundary aware)."""
+        """Match keywords as whole tokens (word-boundary aware)."""
         for kw in keywords:
             if re.search(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])", text):
                 return True
@@ -159,21 +162,19 @@ class URLFeatureExtractor:
         """Detect if a brand label appears in the domain but the domain is
         not the brand's own official domain.
 
-        Strategy: split the domain into labels and check if any label
-        exactly matches a known brand.  Then verify the registered domain
-        (SLD) is NOT the brand itself — if the brand IS the SLD we assume
-        it's legitimate (e.g. paypal.com, paypal.de, microsoft.co.uk).
+        Splits into labels and checks for exact label matches.
+        A brand IS the registered domain (SLD) => treated as legitimate
+        regardless of TLD (handles paypal.de, microsoft.co.uk, etc.).
         """
         if self._is_ip(domain):
             return False
         labels = [p for p in domain.split(".") if p]
-        registered = labels[-2] if len(labels) >= 2 else labels[0]
+        registered = labels[-2] if len(labels) >= 2 else (labels[0] if labels else "")
         for brand in BRAND_KEYWORDS:
             if brand in labels:
-                # It's legitimate if the brand IS the registered domain label
                 if registered == brand:
-                    return False
-                return True
+                    return False   # e.g. paypal.com, paypal.de — legitimate
+                return True        # e.g. secure-paypal.evil.com — impersonation
         return False
 
     def _brand_in_subdomain(self, domain: str) -> bool:
@@ -187,3 +188,65 @@ class URLFeatureExtractor:
                 if brand in subdomain_labels:
                     return True
         return False
+
+    # ------------------------------------------------------------------
+    # Typosquatting / homoglyph detection
+    # ------------------------------------------------------------------
+
+    def _detect_typosquatting(self, domain: str) -> bool:
+        """Detect common typosquatting techniques:
+        1. Homoglyph substitution (paypa1.com, m1crosoft.com)
+        2. Edit-distance-1 from a known brand in the registered label
+
+        Returns True if the registered label looks like a brand impersonation
+        that would be missed by exact-label matching.
+        """
+        if self._is_ip(domain):
+            return False
+
+        registered = self._registered_label(domain)
+
+        # Skip if this IS a legitimate brand label (caught by brand_impersonation)
+        if registered in BRAND_KEYWORDS:
+            return False
+
+        # 1. Homoglyph normalisation: map lookalike chars to ASCII and re-check
+        normalised = registered
+        for fake, real in HOMOGLYPH_MAP.items():
+            normalised = normalised.replace(fake, real)
+        if normalised != registered and normalised in BRAND_KEYWORDS:
+            return True
+
+        # 2. Edit distance 1 (single insert / delete / substitute / transpose)
+        for brand in BRAND_KEYWORDS:
+            if self._edit_distance_1(registered, brand):
+                return True
+
+        return False
+
+    @staticmethod
+    def _edit_distance_1(a: str, b: str) -> bool:
+        """Return True if strings a and b have Levenshtein distance exactly 1."""
+        la, lb = len(a), len(b)
+        if abs(la - lb) > 1:
+            return False
+        if la == lb:
+            # Check for single substitution or transposition
+            diffs = [i for i in range(la) if a[i] != b[i]]
+            if len(diffs) == 1:
+                return True
+            if len(diffs) == 2 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]:
+                return True   # transposition
+            return False
+        # Check for single insertion / deletion
+        shorter, longer = (a, b) if la < lb else (b, a)
+        i = 0
+        skipped = False
+        for j in range(len(longer)):
+            if i < len(shorter) and shorter[i] == longer[j]:
+                i += 1
+            elif skipped:
+                return False
+            else:
+                skipped = True
+        return True
