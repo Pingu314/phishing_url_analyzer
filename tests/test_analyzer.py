@@ -13,8 +13,7 @@ from risk_scorer import RiskScorer
 from redirect_follower import RedirectFollower
 
 
-# ── Feature Extractor Tests ──────────────────────────────────────────────────
-
+# Feature Extractor Tests
 class TestURLFeatureExtractor:
 
     def test_brand_impersonation_detected(self):
@@ -79,8 +78,7 @@ class TestURLFeatureExtractor:
         assert len(f["suspicious_keywords_found"]) >= 1
 
 
-# ── Risk Scorer Tests ────────────────────────────────────────────────────────
-
+# Risk Scorer Tests
 class TestRiskScorer:
 
     @pytest.fixture
@@ -89,26 +87,24 @@ class TestRiskScorer:
 
     @pytest.fixture
     def clean_features(self):
-        return {
-            "uses_https": True,
-            "brand_impersonation": False,
-            "brand_in_subdomain": False,
-            "uses_ip_as_host": False,
-            "suspicious_tld": False,
-            "has_suspicious_keywords": False,
-            "at_symbol": False,
-            "hex_encoding": False,
-            "has_redirect_param": False,
-            "double_slash": False,
-            "redirect_domain_switch": False,
-            "redirect_count": 1,
-            "domain_entropy": 2.0,
-            "url_length": 30,
-            "hyphen_count": 0,
-            "path_depth": 1,
-            "subdomain_count": 0,
-            "port_in_url": False,
-        }
+        return {"uses_https": True,
+                "brand_impersonation": False,
+                "brand_in_subdomain": False,
+                "uses_ip_as_host": False,
+                "suspicious_tld": False,
+                "has_suspicious_keywords": False,
+                "at_symbol": False,
+                "hex_encoding": False,
+                "has_redirect_param": False,
+                "double_slash": False,
+                "redirect_domain_switch": False,
+                "redirect_count": 1,
+                "domain_entropy": 2.0,
+                "url_length": 30,
+                "hyphen_count": 0,
+                "path_depth": 1,
+                "subdomain_count": 0,
+                "port_in_url": False}
 
     @pytest.fixture
     def clean_intel(self):
@@ -147,26 +143,24 @@ class TestRiskScorer:
         assert result["score"] >= 12
 
     def test_score_capped_at_100(self, scorer, clean_intel):
-        features = {
-            "uses_https": False,
-            "brand_impersonation": True,
-            "brand_in_subdomain": True,
-            "uses_ip_as_host": True,
-            "suspicious_tld": True,
-            "has_suspicious_keywords": True,
-            "at_symbol": True,
-            "hex_encoding": True,
-            "has_redirect_param": True,
-            "double_slash": True,
-            "redirect_domain_switch": True,
-            "redirect_count": 5,
-            "domain_entropy": 4.5,
-            "url_length": 200,
-            "hyphen_count": 6,
-            "path_depth": 8,
-            "subdomain_count": 4,
-            "port_in_url": True,
-        }
+        features = {"uses_https": False,
+                    "brand_impersonation": True,
+                    "brand_in_subdomain": True,
+                    "uses_ip_as_host": True,
+                    "suspicious_tld": True,
+                    "has_suspicious_keywords": True,
+                    "at_symbol": True,
+                    "hex_encoding": True,
+                    "has_redirect_param": True,
+                    "double_slash": True,
+                    "redirect_domain_switch": True,
+                    "redirect_count": 5,
+                    "domain_entropy": 4.5,
+                    "url_length": 200,
+                    "hyphen_count": 6,
+                    "path_depth": 8,
+                    "subdomain_count": 4,
+                    "port_in_url": True}
         intel = {"vt_malicious": 20, "urlscan_malicious": True}
         result = scorer.score(features, intel)
         assert result["score"] == 100
@@ -182,8 +176,7 @@ class TestRiskScorer:
         assert result["verdict"] == "SUSPICIOUS"
         assert 21 <= result["score"] <= 49
 
-# ── Redirect Follower Tests (no network — unit test domain parsing only) ─────
-
+# Redirect Follower Tests (no network; unit test domain parsing only)
 class TestRedirectFollower:
 
     def test_extract_domain(self):

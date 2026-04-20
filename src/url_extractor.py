@@ -11,24 +11,16 @@ from typing import Optional
 
 
 # Known brands commonly impersonated in phishing
-BRAND_KEYWORDS = [
-    "paypal", "apple", "microsoft", "google", "amazon", "netflix",
-    "facebook", "instagram", "linkedin", "twitter", "dropbox",
-    "office365", "onedrive", "chase", "wellsfargo", "bankofamerica",
-    "ubs", "postfinance", "raiffeisen", "swisscom", "sbb", "post"
-]
+BRAND_KEYWORDS = ["paypal", "apple", "microsoft", "google", "amazon", "netflix", "facebook",
+                  "instagram", "linkedin", "twitter", "dropbox", "office365", "onedrive", "chase",
+                  "wellsfargo", "bankofamerica", "ubs", "postfinance", "raiffeisen", "swisscom", "sbb", "post"]
 
-SUSPICIOUS_KEYWORDS = [
-    "login", "signin", "verify", "secure", "update", "confirm",
-    "account", "banking", "password", "credential", "validate",
-    "suspended", "locked", "unusual", "activity", "click", "urgent"
-]
+SUSPICIOUS_KEYWORDS = ["login", "signin", "verify", "secure", "update", "confirm", "account", "banking",
+                       "password", "credential", "validate", "suspended", "locked", "unusual", "activity", "click", "urgent"]
 
-SUSPICIOUS_TLDS = [
-    ".xyz", ".tk", ".ml", ".ga", ".cf", ".gq", ".top", ".club",
-    ".click", ".link", ".live", ".online", ".site", ".website",
-    ".info", ".biz", ".pw", ".cc", ".icu"
-]
+SUSPICIOUS_TLDS = [".xyz", ".tk", ".ml", ".ga", ".cf", ".gq", ".top", ".club",
+                   ".click", ".link", ".live", ".online", ".site", ".website",
+                   ".info", ".biz", ".pw", ".cc", ".icu"]
 
 LEGITIMATE_TLDS = [".com", ".org", ".gov", ".edu", ".co.uk", ".de", ".ch", ".fr"]
 
@@ -55,54 +47,52 @@ class URLFeatureExtractor:
         path = self.parsed.path.lower()
         full = url_lower
 
-        features = {
-            # Basic structure
-            "url": self.raw_url,
-            "scheme": self.parsed.scheme,
-            "domain": domain,
-            "path": path,
-            "query_string": self.parsed.query,
+        features = {# Basic structure
+                    "url": self.raw_url,
+                    "scheme": self.parsed.scheme,
+                    "domain": domain,
+                    "path": path,
+                    "query_string": self.parsed.query,
 
-            # Length features
-            "url_length": len(self.raw_url),
-            "domain_length": len(domain),
-            "path_length": len(path),
-            "subdomain_count": self._count_subdomains(domain),
-            "path_depth": len([p for p in path.split("/") if p]),
+                    # Length features
+                    "url_length": len(self.raw_url),
+                    "domain_length": len(domain),
+                    "path_length": len(path),
+                    "subdomain_count": self._count_subdomains(domain),
+                    "path_depth": len([p for p in path.split("/") if p]),
 
-            # Entropy (randomness — high entropy = possible DGA domain)
-            "domain_entropy": self._shannon_entropy(domain.split(".")[0]),
+                    # Entropy (randomness — high entropy = possible DGA domain)
+                    "domain_entropy": self._shannon_entropy(domain.split(".")[0]),
 
-            # Special character features
-            "hyphen_count": full.count("-"),
-            "at_symbol": "@" in full,
-            "double_slash": "//" in path,
-            "hex_encoding": bool(re.search(r"%[0-9a-fA-F]{2}", full)),
-            "ip_in_url": bool(re.search(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", full)),
-            "uses_ip_as_host": bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}", domain)),
-            "port_in_url": bool(self.parsed.port),
+                    # Special character features
+                    "hyphen_count": full.count("-"),
+                    "at_symbol": "@" in full,
+                    "double_slash": "//" in path,
+                    "hex_encoding": bool(re.search(r"%[0-9a-fA-F]{2}", full)),
+                    "ip_in_url": bool(re.search(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", full)),
+                    "uses_ip_as_host": bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}", domain)),
+                    "port_in_url": bool(self.parsed.port),
 
-            # Protocol
-            "uses_https": self.parsed.scheme == "https",
+                    # Protocol
+                    "uses_https": self.parsed.scheme == "https",
 
-            # Content features
-            "has_suspicious_keywords": self._has_any(url_lower, SUSPICIOUS_KEYWORDS),
-            "suspicious_keywords_found": self._find_all(url_lower, SUSPICIOUS_KEYWORDS),
-            "brand_impersonation": self._detect_brand_impersonation(domain),
-            "brand_found": self._find_all(domain, BRAND_KEYWORDS),
+                    # Content features
+                    "has_suspicious_keywords": self._has_any(url_lower, SUSPICIOUS_KEYWORDS),
+                    "suspicious_keywords_found": self._find_all(url_lower, SUSPICIOUS_KEYWORDS),
+                    "brand_impersonation": self._detect_brand_impersonation(domain),
+                    "brand_found": self._find_all(domain, BRAND_KEYWORDS),
 
-            # TLD analysis
-            "tld": self._get_tld(domain),
-            "suspicious_tld": self._has_any(domain, SUSPICIOUS_TLDS),
-            "legitimate_tld": self._has_any(domain, LEGITIMATE_TLDS),
+                    # TLD analysis
+                    "tld": self._get_tld(domain),
+                    "suspicious_tld": self._has_any(domain, SUSPICIOUS_TLDS),
+                    "legitimate_tld": self._has_any(domain, LEGITIMATE_TLDS),
 
-            # Subdomain suspicion (e.g. paypal.attacker.com)
-            "brand_in_subdomain": self._brand_in_subdomain(domain),
+                    # Subdomain suspicion (e.g. paypal.attacker.com)
+                    "brand_in_subdomain": self._brand_in_subdomain(domain),
 
-            # Query string
-            "query_param_count": len(urllib.parse.parse_qs(self.parsed.query)),
-            "has_redirect_param": bool(re.search(r"(redirect|url|next|goto|return)=", full)),
-        }
+                    # Query string
+                    "query_param_count": len(urllib.parse.parse_qs(self.parsed.query)),
+                    "has_redirect_param": bool(re.search(r"(redirect|url|next|goto|return)=", full))}
 
         return features
 

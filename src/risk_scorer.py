@@ -10,39 +10,35 @@ every point can be explained in an interview or incident report.
 
 class RiskScorer:
 
-    WEIGHTS = {
-        # High-signal
-        "vt_malicious":            20,   # per engine (capped at 40)
-        "urlscan_malicious":       20,
-        "brand_impersonation":     18,
-        "brand_in_subdomain":      15,
-        "uses_ip_as_host":         15,
+    WEIGHTS = {# High-signal
+               "vt_malicious":            20,   # per engine (capped at 40)
+               "urlscan_malicious":       20,
+               "brand_impersonation":     18,
+               "brand_in_subdomain":      15,
+               "uses_ip_as_host":         15,
 
-        # Medium-signal
-        "redirect_domain_switch":  12,   # domain changed mid-redirect chain
-        "suspicious_tld":          10,
-        "has_suspicious_keywords":  8,
-        "at_symbol":                8,
-        "no_https":                 7,
-        "hex_encoding":             6,
-        "has_redirect_param":       6,
-        "double_slash":             5,
+               # Medium-signal
+               "redirect_domain_switch":  12,   # domain changed mid-redirect chain
+               "suspicious_tld":          10,
+               "has_suspicious_keywords":  8,
+               "at_symbol":                8,
+               "no_https":                 7,
+               "hex_encoding":             6,
+               "has_redirect_param":       6,
+               "double_slash":             5,
 
-        # Low-signal (accumulate)
-        "high_entropy":             5,   # domain entropy > 3.8
-        "long_url":                 4,   # url length > 75
-        "many_hops":                4,   # redirect hops > 2
-        "many_hyphens":             3,   # > 3 hyphens
-        "deep_path":                3,   # path depth > 4
-        "many_subdomains":          3,   # subdomains > 2
-        "port_in_url":              3,
-    }
+               # Low-signal (accumulate)
+               "high_entropy":             5,   # domain entropy > 3.8
+               "long_url":                 4,   # url length > 75
+               "many_hops":                4,   # redirect hops > 2
+               "many_hyphens":             3,   # > 3 hyphens
+               "deep_path":                3,   # path depth > 4
+               "many_subdomains":          3,   # subdomains > 2
+               "port_in_url":              3}
 
-    THRESHOLDS = {
-        "BENIGN":     (0, 20),
-        "SUSPICIOUS": (21, 49),
-        "MALICIOUS":  (50, 100),
-    }
+    THRESHOLDS = {"BENIGN":     (0, 20),
+                  "SUSPICIOUS": (21, 49),
+                  "MALICIOUS":  (50, 100)}
 
     def score(self, features: dict, intel: dict) -> dict:
         breakdown = {}
@@ -126,8 +122,6 @@ class RiskScorer:
                 verdict = v
                 break
 
-        return {
-            "score": final_score,
-            "verdict": verdict,
-            "breakdown": breakdown,
-        }
+        return {"score": final_score,
+                "verdict": verdict,
+                "breakdown": breakdown}

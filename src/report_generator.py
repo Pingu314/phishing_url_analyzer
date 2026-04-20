@@ -18,14 +18,12 @@ class ReportGenerator:
         filename = f"phishing_analysis_{timestamp}.json"
         filepath = self.output_dir / filename
 
-        report = {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "tool": "Phishing URL Analyzer",
-            "mitre_coverage": ["T1566", "T1566.002", "T1027", "T1583.005"],
-            "total_urls": len(results),
-            "summary": self._summarize(results),
-            "results": results,
-        }
+        report = {"generated_at": datetime.now(timezone.utc).isoformat(),
+                  "tool": "Phishing URL Analyzer",
+                  "mitre_coverage": ["T1566", "T1566.002", "T1027", "T1583.005"],
+                  "total_urls": len(results),
+                  "summary": self._summarize(results),
+                  "results": results}
 
         with open(filepath, "w") as f:
             json.dump(report, f, indent=2)
@@ -34,11 +32,7 @@ class ReportGenerator:
 
     def _summarize(self, results: list) -> dict:
         verdicts = [r["risk"]["verdict"] for r in results]
-        return {
-            "MALICIOUS": verdicts.count("MALICIOUS"),
-            "SUSPICIOUS": verdicts.count("SUSPICIOUS"),
-            "BENIGN": verdicts.count("BENIGN"),
-            "avg_score": round(
-                sum(r["risk"]["score"] for r in results) / len(results), 1
-            ) if results else 0,
-        }
+        return {"MALICIOUS": verdicts.count("MALICIOUS"),
+                "SUSPICIOUS": verdicts.count("SUSPICIOUS"),
+                "BENIGN": verdicts.count("BENIGN"),
+                "avg_score": round(sum(r["risk"]["score"] for r in results) / len(results), 1) if results else 0}

@@ -68,21 +68,17 @@ def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
     # Stage 5: MITRE ATT&CK mapping
     mitre_tags = map_to_mitre(features, intel, redirect_data)
 
-    result = {
-        "url": url,
-        "final_url": final_url,
-        "redirect_chain": redirect_data,
-        "features": features,
-        "threat_intel": intel,
-        "risk": risk,
-        "mitre": mitre_tags,
-    }
+    result = {"url": url,
+              "final_url": final_url,
+              "redirect_chain": redirect_data,
+              "features": features,
+              "threat_intel": intel,
+              "risk": risk,
+              "mitre": mitre_tags}
 
-    verdict_color = {
-        "BENIGN":     "\033[92m",
-        "SUSPICIOUS": "\033[93m",
-        "MALICIOUS":  "\033[91m",
-    }
+    verdict_color = {"BENIGN":     "\033[92m",
+                     "SUSPICIOUS": "\033[93m",
+                     "MALICIOUS":  "\033[91m"}
     reset = "\033[0m"
     color = verdict_color.get(risk["verdict"], "")
 
@@ -121,16 +117,14 @@ def load_config(config_path: str = "config/config.json") -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Phishing URL Analyzer - SOC Triage Tool",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python main.py -u "http://suspicious-site.com/login"
-  python main.py -f data/sample_urls/urls.txt
-  python main.py -u "http://paypa1.com/verify" --verbose --export
-        """
-    )
+    parser = argparse.ArgumentParser(description="Phishing URL Analyzer - SOC Triage Tool",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     epilog="""
+                                            Examples:
+                                            python main.py -u "http://suspicious-site.com/login"
+                                            python main.py -f data/sample_urls/urls.txt
+                                            python main.py -u "http://paypa1.com/verify" --verbose --export
+                                            """)
     parser.add_argument("-u", "--url", help="Single URL to analyze")
     parser.add_argument("-f", "--file", help="File with URLs (one per line)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed output")
@@ -149,10 +143,7 @@ Examples:
         urls.append(args.url)
     if args.file:
         with open(args.file) as f:
-            urls.extend([
-                line.strip() for line in f
-                if line.strip() and not line.startswith("#")
-            ])
+            urls.extend([line.strip() for line in f if line.strip() and not line.startswith("#")])
 
     results = []
     for url in urls:

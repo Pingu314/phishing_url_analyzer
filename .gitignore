@@ -8,5 +8,3 @@ reports/
 *.pyo
 .env
 config/config.json
-
-
