@@ -2,10 +2,14 @@
 Threat Intelligence Enricher
 Integrates with VirusTotal and URLScan.io APIs.
 Gracefully degrades if API keys are not configured.
+
+Designed for easy extension — additional enrichers (e.g. WHOIS,
+AbuseIPDB) can be added as new _query_* methods and wired into enrich().
+This interface is kept stable so soc_threat_analyzer can call it directly.
 """
 
 import time
-import urllib.parse     # Allow import without circular issues
+import urllib.parse
 import urllib.request
 import urllib.error
 import json
@@ -17,23 +21,28 @@ class ThreatIntelEnricher:
         self.vt_api_key = config.get("virustotal_api_key", "")
         self.urlscan_api_key = config.get("urlscan_api_key", "")
 
-    def enrich(self, url: str, domain: str) -> dict:
-        intel = {"vt_checked": False,
-                 "vt_malicious": 0,
-                 "vt_suspicious": 0,
-                 "vt_harmless": 0,
-                 "vt_undetected": 0,
-                 "vt_engines_total": 0,
-                 "vt_link": "",
-                 "urlscan_checked": False,
-                 "urlscan_malicious": False,
-                 "urlscan_score": 0,
-                 "urlscan_link": "",
-                 "enrichment_errors": [] }
+    def enrich(self, url: str) -> dict:
+        """Run all available TI checks and return a merged result dict."""
+        intel = {
+            "vt_checked": False,
+            "vt_malicious": 0,
+            "vt_suspicious": 0,
+            "vt_harmless": 0,
+            "vt_undetected": 0,
+            "vt_engines_total": 0,
+            "vt_link": "",
+            "urlscan_checked": False,
+            "urlscan_malicious": False,
+            "urlscan_score": 0,
+            "urlscan_link": "",
+            "enrichment_errors": [],
+        }
 
         if self.vt_api_key:
             vt_result = self._query_virustotal(url)
             if vt_result:
+                errors = vt_result.pop("enrichment_errors", [])
+                intel["enrichment_errors"].extend(errors)
                 intel.update(vt_result)
         else:
             intel["enrichment_errors"].append("VirusTotal: no API key configured")
@@ -41,6 +50,8 @@ class ThreatIntelEnricher:
         if self.urlscan_api_key:
             urlscan_result = self._query_urlscan(url)
             if urlscan_result:
+                errors = urlscan_result.pop("enrichment_errors", [])
+                intel["enrichment_errors"].extend(errors)
                 intel.update(urlscan_result)
         else:
             intel["enrichment_errors"].append("URLScan.io: no API key configured")
@@ -94,7 +105,7 @@ class ThreatIntelEnricher:
             return {"enrichment_errors": [f"VirusTotal submit error: {str(e)}"]}
 
     def _query_urlscan(self, url: str) -> Optional[dict]:
-        """Submit URL to URLScan.io and return verdict."""
+        """Submit URL to URLScan.io and poll for the verdict."""
         try:
             payload = json.dumps({"url": url, "visibility": "private"}).encode()
             req = urllib.request.Request("https://urlscan.io/api/v1/scan/",
@@ -107,21 +118,28 @@ class ThreatIntelEnricher:
 
             scan_uuid = submit_data.get("uuid")
             if not scan_uuid:
-                return None
+                return {"enrichment_errors": ["URLScan: no uuid returned"]}
 
-            # URLScan takes ~10s to process
-            time.sleep(12)
-
+            # Poll for results (URLScan typically takes 10-20s to process)
             result_url = f"https://urlscan.io/api/v1/result/{scan_uuid}/"
-            req2 = urllib.request.Request(result_url, headers={"API-Key": self.urlscan_api_key})
-            with urllib.request.urlopen(req2, timeout=10) as response:
-                result_data = json.loads(response.read())
+            req2 = urllib.request.Request(result_url,
+                                          headers={"API-Key": self.urlscan_api_key})
+            for attempt in range(10):
+                time.sleep(3)
+                try:
+                    with urllib.request.urlopen(req2, timeout=10) as response:
+                        result_data = json.loads(response.read())
+                    verdicts = result_data.get("verdicts", {}).get("overall", {})
+                    return {"urlscan_checked": True,
+                            "urlscan_malicious": verdicts.get("malicious", False),
+                            "urlscan_score": verdicts.get("score", 0),
+                            "urlscan_link": f"https://urlscan.io/result/{scan_uuid}/"}
+                except urllib.error.HTTPError as e:
+                    if e.code == 404:
+                        continue   # Not ready yet — keep polling
+                    raise
 
-            verdicts = result_data.get("verdicts", {}).get("overall", {})
-            return {"urlscan_checked": True,
-                    "urlscan_malicious": verdicts.get("malicious", False),
-                    "urlscan_score": verdicts.get("score", 0),
-                    "urlscan_link": f"https://urlscan.io/result/{scan_uuid}/"}
+            return {"enrichment_errors": [f"URLScan: result not ready after polling"]}
 
         except Exception as e:
             return {"enrichment_errors": [f"URLScan error: {str(e)}"]}
