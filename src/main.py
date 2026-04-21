@@ -39,13 +39,18 @@ def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
             print(f"    Hop {hop['hop']}: [{hop.get('status_code', '?')}] "
                   f"{hop['from_url']} -> {hop['to_url']}")
 
-    # Stage 2: Feature extraction (on final URL after redirects)
+    # Stage 2: Feature extraction
+    # IMPORTANT: always extract features from the ORIGINAL url so that
+    # typosquatting / brand signals on the submitted URL are preserved even
+    # when the redirect chain resolves to a legitimate final destination
+    # (e.g. paypa1.com -> paypal.com must still score as typosquatting).
     final_url = redirect_data["final_url"]
     if final_url != url:
-        print(f"[*] Extracting features (final destination: {final_url[:55]})")
+        print(f"[*] Extracting features (original URL; final destination: {final_url[:45]})")
     else:
         print("[*] Extracting URL features...")
-    extractor = URLFeatureExtractor(final_url)
+
+    extractor = URLFeatureExtractor(url)
     features = extractor.extract()
     features["redirect_count"] = hop_count
     features["redirect_domain_switch"] = domain_switches > 0
@@ -54,6 +59,7 @@ def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
         print(f"  Features: {json.dumps(features, indent=2)}")
 
     # Stage 3: Threat intelligence enrichment
+    # TI runs on the final URL (the actual destination) for more accurate results.
     print("[*] Enriching with threat intelligence...")
     enricher = ThreatIntelEnricher(config)
     intel = enricher.enrich(final_url)
@@ -98,9 +104,9 @@ def map_to_mitre(features: dict, intel: dict, redirect_data: dict) -> list:
     tags = []
 
     # T1566.002 — Spearphishing Link
-    # Requires brand impersonation OR typosquatting (high-confidence signals),
-    # not just any suspicious keyword hit.
-    if features.get("brand_impersonation") or features.get("typosquatting") or features.get("brand_in_subdomain"):
+    # Requires brand impersonation OR typosquatting (high-confidence signals).
+    if (features.get("brand_impersonation") or features.get("typosquatting")
+            or features.get("brand_in_subdomain")):
         tags.append("T1566.002 - Spearphishing Link")
 
     # T1027 — Obfuscated Files or Information
