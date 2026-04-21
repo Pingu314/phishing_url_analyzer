@@ -2,6 +2,8 @@
 Phishing URL Analyzer - Main Entry Point
 SOC Portfolio Project | MITRE ATT&CK: T1566 (Phishing)
 """
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
 
 import argparse
 import json
