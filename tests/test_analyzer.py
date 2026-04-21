@@ -3,8 +3,7 @@ Unit tests for Phishing URL Analyzer
 Run: pytest tests/ -v
 """
 
-import sys
-import os
+import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 
 import pytest
@@ -14,13 +13,10 @@ from redirect_follower import RedirectFollower
 from main import map_to_mitre
 
 
-# ===========================================================================
 # Feature Extractor Tests
-# ===========================================================================
-
 class TestURLFeatureExtractor:
 
-    # --- Brand impersonation (exact label) ---
+    # Brand impersonation (exact label)
 
     def test_brand_impersonation_detected(self):
         f = URLFeatureExtractor("http://paypal-secure.com/login").extract()
@@ -54,7 +50,7 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("https://example.com/paypal/redirect").extract()
         assert f["brand_impersonation"] is False
 
-    # --- Typosquatting ---
+    # Typosquatting
 
     def test_typosquatting_homoglyph_detected(self):
         """paypa1.com — '1' instead of 'l'."""
@@ -74,7 +70,7 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("https://example.com/page").extract()
         assert f["typosquatting"] is False
 
-    # --- IP as host ---
+    # IP as host
 
     def test_ip_as_host(self):
         f = URLFeatureExtractor("http://192.168.1.1/login").extract()
@@ -89,7 +85,7 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("http://192.168.1.105/bank/login.php").extract()
         assert f["subdomain_count"] == 0
 
-    # --- Entropy ---
+    # Entropy
 
     def test_entropy_uses_registered_label(self):
         """Entropy must be computed on the SLD label, not 'www'."""
@@ -101,13 +97,13 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("https://google.com").extract()
         assert isinstance(f["domain_entropy"], float)
 
-    # --- TLD ---
+    # TLD
 
     def test_suspicious_tld(self):
         f = URLFeatureExtractor("https://banking-secure.xyz/verify").extract()
         assert f["suspicious_tld"] is True
 
-    # --- HTTPS ---
+    # HTTPS
 
     def test_https_detected(self):
         f = URLFeatureExtractor("https://google.com").extract()
@@ -117,7 +113,7 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("http://google.com").extract()
         assert f["uses_https"] is False
 
-    # --- Encoding / symbols ---
+    # Encoding / symbols
 
     def test_hex_encoding_detected(self):
         f = URLFeatureExtractor("http://evil.com/path%2Fevade%2F").extract()
@@ -127,7 +123,7 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("http://legit.com@evil.com").extract()
         assert f["at_symbol"] is True
 
-    # --- Brand in subdomain ---
+    # Brand in subdomain
 
     def test_brand_in_subdomain(self):
         f = URLFeatureExtractor("http://paypal.evil.com/login").extract()
@@ -137,25 +133,25 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("https://paypal.com/signin").extract()
         assert f["brand_in_subdomain"] is False
 
-    # --- Subdomain count ---
+    # Subdomain count
 
     def test_subdomain_count(self):
         f = URLFeatureExtractor("http://a.b.c.evil.com/login").extract()
         assert f["subdomain_count"] >= 3
 
-    # --- Redirect param ---
+    # Redirect param
 
     def test_redirect_param_detected(self):
         f = URLFeatureExtractor("http://site.com/page?next=http://evil.com").extract()
         assert f["has_redirect_param"] is True
 
-    # --- URL length ---
+    # URL length
 
     def test_url_length(self):
         f = URLFeatureExtractor("https://" + "a" * 80 + ".com").extract()
         assert f["url_length"] > 75
 
-    # --- Suspicious keywords (label-aware) ---
+    # Suspicious keywords (label-aware)
 
     def test_suspicious_keywords_found(self):
         f = URLFeatureExtractor("http://evil.com/login/verify/account").extract()
@@ -167,7 +163,7 @@ class TestURLFeatureExtractor:
         f = URLFeatureExtractor("https://example.com/blog/repost/article").extract()
         assert f["brand_impersonation"] is False
 
-    # --- Malware feature keys ---
+    # Malware feature keys
 
     def test_malware_extension_key_present(self):
         """extract() must always return malware_extension key."""
@@ -198,10 +194,8 @@ class TestURLFeatureExtractor:
         assert f["uses_https"] is False
 
 
-# ===========================================================================
-# Risk Scorer Tests
-# ===========================================================================
 
+# Risk Scorer Tests
 class TestRiskScorer:
 
     @pytest.fixture
@@ -340,10 +334,7 @@ class TestRiskScorer:
         assert risk["verdict"] in ("SUSPICIOUS", "MALICIOUS")
 
 
-# ===========================================================================
 # Redirect Follower Tests
-# ===========================================================================
-
 class TestRedirectFollower:
 
     def test_extract_domain(self):
@@ -376,10 +367,7 @@ class TestRedirectFollower:
             assert key in result, f"Missing key: {key}"
 
 
-# ===========================================================================
 # MITRE Mapping Tests
-# ===========================================================================
-
 class TestMapToMitre:
 
     def _base_features(self, **overrides):

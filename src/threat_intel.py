@@ -23,20 +23,18 @@ class ThreatIntelEnricher:
 
     def enrich(self, url: str) -> dict:
         """Run all available TI checks and return a merged result dict."""
-        intel = {
-            "vt_checked": False,
-            "vt_malicious": 0,
-            "vt_suspicious": 0,
-            "vt_harmless": 0,
-            "vt_undetected": 0,
-            "vt_engines_total": 0,
-            "vt_link": "",
-            "urlscan_checked": False,
-            "urlscan_malicious": False,
-            "urlscan_score": 0,
-            "urlscan_link": "",
-            "enrichment_errors": [],
-        }
+        intel = {"vt_checked": False,
+                 "vt_malicious": 0,
+                 "vt_suspicious": 0,
+                 "vt_harmless": 0,
+                 "vt_undetected": 0,
+                 "vt_engines_total": 0,
+                 "vt_link": "",
+                 "urlscan_checked": False,
+                 "urlscan_malicious": False,
+                 "urlscan_score": 0,
+                 "urlscan_link": "",
+                 "enrichment_errors": []}
 
         if self.vt_api_key:
             vt_result = self._query_virustotal(url)

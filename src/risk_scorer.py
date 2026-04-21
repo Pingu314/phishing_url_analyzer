@@ -21,9 +21,7 @@ class RiskScorer:
             nonlocal total
             total += points
 
-        # ------------------------------------------------------------------
         # Threat intel signals
-        # ------------------------------------------------------------------
         vt_mal = intel.get("vt_malicious", 0)
         if vt_mal > 0:
             pts = min(vt_mal * WEIGHTS["vt_malicious"], 40)
@@ -32,9 +30,7 @@ class RiskScorer:
         if intel.get("urlscan_malicious"):
             add("urlscan_malicious", WEIGHTS["urlscan_malicious"])
 
-        # ------------------------------------------------------------------
         # Structural / content signals
-        # ------------------------------------------------------------------
         if features.get("brand_impersonation"):
             add("brand_impersonation", WEIGHTS["brand_impersonation"])
 
@@ -79,9 +75,7 @@ class RiskScorer:
         if any(kw in path_lower for kw in MALWARE_PATH_KEYWORDS):
             add("malware_path_keyword", WEIGHTS["malware_path_keyword"])
 
-        # ------------------------------------------------------------------
         # Soft / statistical signals
-        # ------------------------------------------------------------------
         if features.get("domain_entropy", 0) > 3.8:
             add("high_entropy", WEIGHTS["high_entropy"])
 

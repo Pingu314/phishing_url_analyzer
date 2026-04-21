@@ -11,14 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Keep in sync with map_to_mitre() in main.py
-MITRE_COVERAGE = [
-    "T1566",          # Phishing (VT/URLScan confirmed)
-    "T1566.002",      # Spearphishing Link (brand impersonation / typosquatting)
-    "T1027",          # Obfuscated Files or Information (redirects, hex encoding)
-    "T1659",          # Content Injection / Redirect (domain switch mid-chain)
-    "T1583.005",      # Botnet / IP-based C2 (IP as host)
-    "T1105",          # Ingress Tool Transfer (.exe/.ps1/payload in path)
-]
+MITRE_COVERAGE = ["T1566",          # Phishing (VT/URLScan confirmed)
+                  "T1566.002",      # Spearphishing Link (brand impersonation / typosquatting)
+                  "T1027",          # Obfuscated Files or Information (redirects, hex encoding)
+                  "T1659",          # Content Injection / Redirect (domain switch mid-chain)
+                  "T1583.005",      # Botnet / IP-based C2 (IP as host)
+                  "T1105" ]         # Ingress Tool Transfer (.exe/.ps1/payload in path)
 
 
 class ReportGenerator:

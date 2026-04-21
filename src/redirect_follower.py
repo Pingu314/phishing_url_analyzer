@@ -10,7 +10,6 @@ import urllib.request
 import urllib.error
 import urllib.parse
 import socket
-from typing import Optional
 
 from settings import MAX_HOPS, REQUEST_TIMEOUT
 
@@ -44,7 +43,7 @@ class RedirectFollower:
             next_url = result.get("location")
 
             if not next_url:
-                # No Location header — this is the final destination (not a hop)
+                # No Location header - this is the final destination (not a hop)
                 break
 
             # Handle relative redirects before recording the hop
@@ -52,21 +51,17 @@ class RedirectFollower:
             next_domain = self._extract_domain(next_url)
 
             # Record this hop (current_url -> next_url)
-            chain.append({
-                "hop": len(chain) + 1,
-                "from_url": current_url,
-                "to_url": next_url,
-                "domain": next_domain,
-                "status_code": result.get("status_code"),
-            })
+            chain.append({"hop": len(chain) + 1,
+                          "from_url": current_url,
+                          "to_url": next_url,
+                          "domain": next_domain,
+                          "status_code": result.get("status_code")})
 
             # Detect domain switch on this hop
             if next_domain != prev_domain:
-                domain_switches.append({
-                    "hop": len(chain),
-                    "from": prev_domain,
-                    "to": next_domain,
-                })
+                domain_switches.append({"hop": len(chain),
+                                        "from": prev_domain,
+                                        "to": next_domain})
 
             prev_domain = next_domain
             current_url = next_url
@@ -75,19 +70,17 @@ class RedirectFollower:
         final_domain = self._extract_domain(final_url)
         initial_domain = self._extract_domain(url)
 
-        return {
-            "initial_url": url,
-            "final_url": final_url,
-            "hop_count": len(chain),          # 0 = no redirects
-            "chain": chain,
-            "domain_switches": domain_switches,
-            "domain_changed": initial_domain != final_domain,
-            "initial_domain": initial_domain,
-            "final_domain": final_domain,
-            "errors": errors,
-            # Convenience flag for downstream scoring
-            "suspicious": len(domain_switches) > 0 or len(chain) > 3,
-        }
+        return {"initial_url": url,
+                "final_url": final_url,
+                "hop_count": len(chain),          # 0 = no redirects
+                "chain": chain,
+                "domain_switches": domain_switches,
+                "domain_changed": initial_domain != final_domain,
+                "initial_domain": initial_domain,
+                "final_domain": final_domain,
+                "errors": errors,
+                # Convenience flag for downstream scoring
+                "suspicious": len(domain_switches) > 0 or len(chain) > 3}
 
     def _fetch_single(self, url: str) -> dict:
         """
@@ -106,16 +99,12 @@ class RedirectFollower:
 
             try:
                 with opener.open(req, timeout=REQUEST_TIMEOUT) as response:
-                    return {
-                        "status_code": response.status,
-                        "location": response.headers.get("Location"),
-                    }
+                    return {"status_code": response.status,
+                            "location": response.headers.get("Location")}
             except urllib.error.HTTPError as e:
                 location = e.headers.get("Location") if e.headers else None
-                return {
-                    "status_code": e.code,
-                    "location": location,
-                }
+                return {"status_code": e.code,
+                        "location": location}
 
         except urllib.error.URLError as e:
             return {"error": f"URLError: {str(e.reason)}"}

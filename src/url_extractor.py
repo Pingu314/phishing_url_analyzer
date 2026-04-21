@@ -9,15 +9,8 @@ import math
 import urllib.parse
 from typing import Optional
 
-from settings import (
-    BRAND_KEYWORDS,
-    SUSPICIOUS_KEYWORDS,
-    SUSPICIOUS_TLDS,
-    LEGITIMATE_TLDS,
-    HOMOGLYPH_MAP,
-    MALWARE_EXTENSIONS,
-    MALWARE_PATH_KEYWORDS,
-)
+from settings import (BRAND_KEYWORDS, SUSPICIOUS_KEYWORDS, SUSPICIOUS_TLDS, LEGITIMATE_TLDS,
+                      HOMOGLYPH_MAP, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS)
 
 
 class URLFeatureExtractor:
@@ -107,10 +100,8 @@ class URLFeatureExtractor:
 
         return features
 
-    # ------------------------------------------------------------------
-    # Subdomain / domain helpers
-    # ------------------------------------------------------------------
 
+    # Subdomain / domain helpers
     def _count_subdomains(self, domain: str) -> int:
         """Return number of subdomain labels, skipping IP addresses."""
         if self._is_ip(domain):
@@ -131,20 +122,16 @@ class URLFeatureExtractor:
             return parts[-2]   # e.g. 'google', 'paypal', 'phishing-site'
         return parts[0] if parts else domain
 
-    # ------------------------------------------------------------------
-    # Entropy
-    # ------------------------------------------------------------------
 
+    # Entropy
     def _shannon_entropy(self, s: str) -> float:
         if not s:
             return 0.0
         freq = {c: s.count(c) / len(s) for c in set(s)}
         return round(-sum(p * math.log2(p) for p in freq.values()), 3)
 
-    # ------------------------------------------------------------------
-    # Keyword / brand matching helpers
-    # ------------------------------------------------------------------
 
+    # Keyword / brand matching helpers
     def _has_any(self, text: str, keywords: list) -> bool:
         """Plain substring match — used only for TLD checks."""
         return any(kw in text for kw in keywords)
@@ -181,10 +168,8 @@ class URLFeatureExtractor:
                         found.append(b)
         return found
 
-    # ------------------------------------------------------------------
-    # TLD / brand detection
-    # ------------------------------------------------------------------
 
+    # TLD / brand detection
     def _get_tld(self, domain: str) -> str:
         parts = domain.split(".")
         return "." + parts[-1] if len(parts) >= 2 else ""
