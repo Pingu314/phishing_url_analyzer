@@ -15,6 +15,8 @@ from settings import (
     SUSPICIOUS_TLDS,
     LEGITIMATE_TLDS,
     HOMOGLYPH_MAP,
+    MALWARE_EXTENSIONS,
+    MALWARE_PATH_KEYWORDS,
 )
 
 
@@ -88,7 +90,11 @@ class URLFeatureExtractor:
 
                     # Query string
                     "query_param_count": len(urllib.parse.parse_qs(self.parsed.query)),
-                    "has_redirect_param": bool(re.search(r"(redirect|url|next|goto|return)=", full))}
+                    "has_redirect_param": bool(re.search(r"(redirect|url|next|goto|return)=", full)),
+
+                    # Malware delivery signals (pre-computed for MITRE mapping)
+                    "malware_extension": any(ext in path for ext in MALWARE_EXTENSIONS),
+                    "malware_path_keyword": any(kw in path for kw in MALWARE_PATH_KEYWORDS)}
 
         return features
 
@@ -127,7 +133,7 @@ class URLFeatureExtractor:
         return round(-sum(p * math.log2(p) for p in freq.values()), 3)
 
     # ------------------------------------------------------------------
-    # Keyword / brand matching helpers  (label-aware)
+    # Keyword / brand matching helpers
     # ------------------------------------------------------------------
 
     def _has_any(self, text: str, keywords: list) -> bool:
@@ -135,7 +141,10 @@ class URLFeatureExtractor:
         return any(kw in text for kw in keywords)
 
     def _has_any_label(self, text: str, keywords: list) -> bool:
-        """Match keywords as whole tokens (word-boundary aware)."""
+        """Match keywords as whole tokens (word-boundary aware).
+        Uses non-alphanumeric boundaries so 'verify' matches in '/verify?'
+        but NOT in 'unverified' or 'overwrite'.
+        """
         for kw in keywords:
             if re.search(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])", text):
                 return True
@@ -146,9 +155,17 @@ class URLFeatureExtractor:
                 if re.search(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])", text)]
 
     def _find_brands_in_domain(self, domain: str) -> list:
-        """Return brand names found as full domain labels."""
+        """Return brand names found as full domain labels or within hyphenated labels."""
         labels = domain.replace(":", "").split(".")
-        return [b for b in BRAND_KEYWORDS if b in labels]
+        found = []
+        for b in BRAND_KEYWORDS:
+            for label in labels:
+                # Exact label match OR brand as a hyphen-delimited segment
+                parts = label.split("-")
+                if b == label or b in parts:
+                    if b not in found:
+                        found.append(b)
+        return found
 
     # ------------------------------------------------------------------
     # TLD / brand detection
@@ -159,34 +176,51 @@ class URLFeatureExtractor:
         return "." + parts[-1] if len(parts) >= 2 else ""
 
     def _detect_brand_impersonation(self, domain: str) -> bool:
-        """Detect if a brand label appears in the domain but the domain is
-        not the brand's own official domain.
+        """Detect if a brand appears in the domain but the domain is not
+        the brand's own official domain.
 
-        Splits into labels and checks for exact label matches.
-        A brand IS the registered domain (SLD) => treated as legitimate
-        regardless of TLD (handles paypal.de, microsoft.co.uk, etc.).
+        Matching strategy — checks two levels:
+        1. Exact label match: 'paypal' in ['secure', 'paypal', 'evil', 'com']
+        2. Hyphenated segment: 'microsoft' in 'microsoft-account-update' (split by '-')
+
+        Legitimate check: brand IS the registered domain label (SLD),
+        regardless of TLD — handles paypal.de, microsoft.co.uk, etc.
         """
         if self._is_ip(domain):
             return False
         labels = [p for p in domain.split(".") if p]
         registered = labels[-2] if len(labels) >= 2 else (labels[0] if labels else "")
+
         for brand in BRAND_KEYWORDS:
-            if brand in labels:
+            brand_present = False
+            for label in labels:
+                # Check exact label OR brand as a hyphen-delimited part of the label
+                if brand == label or brand in label.split("-"):
+                    brand_present = True
+                    break
+
+            if brand_present:
+                # Legitimate: brand IS the registered domain label
+                # (e.g. paypal.com, paypal.de, microsoft.co.uk)
+                # registered == "paypal" or registered == "microsoft" -> legit
+                # registered == "microsoft-account-update" -> impersonation
                 if registered == brand:
-                    return False   # e.g. paypal.com, paypal.de — legitimate
-                return True        # e.g. secure-paypal.evil.com — impersonation
+                    return False
+                return True
         return False
 
     def _brand_in_subdomain(self, domain: str) -> bool:
-        """Detect brand name used as a subdomain label: paypal.evil.com"""
+        """Detect brand name used as a subdomain label or hyphenated segment."""
         if self._is_ip(domain):
             return False
         parts = [p for p in domain.split(".") if p]
         if len(parts) > 2:
             subdomain_labels = parts[:-2]
-            for brand in BRAND_KEYWORDS:
-                if brand in subdomain_labels:
-                    return True
+            for label in subdomain_labels:
+                label_parts = label.split("-")
+                for brand in BRAND_KEYWORDS:
+                    if brand == label or brand in label_parts:
+                        return True
         return False
 
     # ------------------------------------------------------------------
@@ -210,14 +244,14 @@ class URLFeatureExtractor:
         if registered in BRAND_KEYWORDS:
             return False
 
-        # 1. Homoglyph normalisation: map lookalike chars to ASCII and re-check
+        # 1. Homoglyph normalisation
         normalised = registered
         for fake, real in HOMOGLYPH_MAP.items():
             normalised = normalised.replace(fake, real)
         if normalised != registered and normalised in BRAND_KEYWORDS:
             return True
 
-        # 2. Edit distance 1 (single insert / delete / substitute / transpose)
+        # 2. Edit distance 1
         for brand in BRAND_KEYWORDS:
             if self._edit_distance_1(registered, brand):
                 return True
@@ -231,14 +265,12 @@ class URLFeatureExtractor:
         if abs(la - lb) > 1:
             return False
         if la == lb:
-            # Check for single substitution or transposition
             diffs = [i for i in range(la) if a[i] != b[i]]
             if len(diffs) == 1:
                 return True
             if len(diffs) == 2 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]:
-                return True   # transposition
+                return True
             return False
-        # Check for single insertion / deletion
         shorter, longer = (a, b) if la < lb else (b, a)
         i = 0
         skipped = False
