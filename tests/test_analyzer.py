@@ -20,10 +20,20 @@ from main import map_to_mitre
 
 class TestURLFeatureExtractor:
 
-    # --- Brand impersonation ---
+    # --- Brand impersonation (exact label) ---
 
     def test_brand_impersonation_detected(self):
         f = URLFeatureExtractor("http://paypal-secure.com/login").extract()
+        assert f["brand_impersonation"] is True
+
+    def test_brand_impersonation_hyphenated_label(self):
+        """microsoft-account-update.xyz — brand in hyphenated label must be detected."""
+        f = URLFeatureExtractor("https://microsoft-account-update.xyz/verify").extract()
+        assert f["brand_impersonation"] is True
+
+    def test_brand_impersonation_apple_subdomain_compound(self):
+        """secure.apple.com.phishing-site.tk — apple as subdomain label."""
+        f = URLFeatureExtractor("https://secure.apple.com.phishing-site.tk/id/verify").extract()
         assert f["brand_impersonation"] is True
 
     def test_legitimate_brand_dot_com_not_flagged(self):
@@ -31,7 +41,7 @@ class TestURLFeatureExtractor:
         assert f["brand_impersonation"] is False
 
     def test_legitimate_brand_non_com_tld_not_flagged(self):
-        """paypal.de / microsoft.co.uk must NOT be flagged — old bug was .com-only whitelist."""
+        """paypal.de must NOT be flagged — old bug was .com-only whitelist."""
         f = URLFeatureExtractor("https://paypal.de/signin").extract()
         assert f["brand_impersonation"] is False
 
@@ -85,7 +95,6 @@ class TestURLFeatureExtractor:
         """Entropy must be computed on the SLD label, not 'www'."""
         f_www = URLFeatureExtractor("https://www.google.com").extract()
         f_bare = URLFeatureExtractor("https://google.com").extract()
-        # Both should give entropy of the 'google' label
         assert f_www["domain_entropy"] == f_bare["domain_entropy"]
 
     def test_entropy_computed(self):
@@ -156,8 +165,37 @@ class TestURLFeatureExtractor:
     def test_post_keyword_no_false_positive(self):
         """'post' brand must NOT trigger on unrelated URLs containing the string 'post'."""
         f = URLFeatureExtractor("https://example.com/blog/repost/article").extract()
-        # brand_impersonation should NOT fire just because 'post' is in path
         assert f["brand_impersonation"] is False
+
+    # --- Malware feature keys ---
+
+    def test_malware_extension_key_present(self):
+        """extract() must always return malware_extension key."""
+        f = URLFeatureExtractor("https://google.com").extract()
+        assert "malware_extension" in f
+        assert f["malware_extension"] is False
+
+    def test_malware_extension_detected(self):
+        f = URLFeatureExtractor("http://evil.com/download/payload.exe").extract()
+        assert f["malware_extension"] is True
+
+    def test_malware_path_keyword_key_present(self):
+        """extract() must always return malware_path_keyword key."""
+        f = URLFeatureExtractor("https://google.com").extract()
+        assert "malware_path_keyword" in f
+        assert f["malware_path_keyword"] is False
+
+    def test_malware_path_keyword_detected(self):
+        f = URLFeatureExtractor("http://185.220.101.55/payload/download.exe").extract()
+        assert f["malware_path_keyword"] is True
+
+    def test_real_world_malware_url(self):
+        """185.220.101.55/payload/download.exe should flag both malware signals."""
+        f = URLFeatureExtractor("http://185.220.101.55/payload/download.exe").extract()
+        assert f["uses_ip_as_host"] is True
+        assert f["malware_extension"] is True
+        assert f["malware_path_keyword"] is True
+        assert f["uses_https"] is False
 
 
 # ===========================================================================
@@ -281,7 +319,6 @@ class TestRiskScorer:
         assert "brand_impersonation" in risk["breakdown"]
 
     def test_verdict_suspicious_range(self, scorer, clean_features, clean_intel):
-        # Score of ~30 (IP host=15 + no_https=7 + suspicious_tld=10) should be SUSPICIOUS
         features = {**clean_features,
                     "uses_https": False,
                     "uses_ip_as_host": True,
@@ -293,6 +330,14 @@ class TestRiskScorer:
         features = {**clean_features, "uses_https": False}
         risk = scorer.score(features, clean_intel)
         assert risk["score"] >= 7
+
+    def test_microsoft_account_update_xyz_is_suspicious_or_malicious(self, scorer, clean_intel):
+        """Regression: microsoft-account-update.xyz was scoring only 18 (brand missed)."""
+        f = URLFeatureExtractor("https://microsoft-account-update.xyz/verify").extract()
+        risk = scorer.score({**f, "redirect_count": 0, "redirect_domain_switch": False}, clean_intel)
+        # Should have: brand_impersonation(18) + suspicious_tld(10) + keywords(8) + ... >= 36
+        assert risk["score"] >= 36
+        assert risk["verdict"] in ("SUSPICIOUS", "MALICIOUS")
 
 
 # ===========================================================================
@@ -359,8 +404,8 @@ class TestMapToMitre:
         return r
 
     def test_t1566_002_requires_brand_signal(self):
-        """T1566.002 must NOT fire on keywords alone — needs brand signal."""
-        f = self._base_features()   # no brand, no typo
+        """T1566.002 must NOT fire on keywords alone."""
+        f = self._base_features()
         tags = map_to_mitre(f, self._base_intel(), self._base_redirect())
         assert "T1566.002 - Spearphishing Link" not in tags
 
@@ -396,10 +441,23 @@ class TestMapToMitre:
                             self._base_redirect())
         assert "T1566 - Phishing" in tags
 
+    def test_t1105_fires_on_malware_extension(self):
+        """Regression: T1105 was never firing because feature key was missing."""
+        f = self._base_features(malware_extension=True)
+        tags = map_to_mitre(f, self._base_intel(), self._base_redirect())
+        assert "T1105 - Ingress Tool Transfer" in tags
+
     def test_t1105_fires_on_malware_path(self):
         f = self._base_features(malware_path_keyword=True)
         tags = map_to_mitre(f, self._base_intel(), self._base_redirect())
         assert "T1105 - Ingress Tool Transfer" in tags
+
+    def test_t1105_fires_on_real_world_url(self):
+        """185.220.101.55/payload/download.exe must trigger T1105."""
+        f = URLFeatureExtractor("http://185.220.101.55/payload/download.exe").extract()
+        tags = map_to_mitre(f, self._base_intel(), self._base_redirect())
+        assert "T1105 - Ingress Tool Transfer" in tags
+        assert "T1583.005 - Botnet / IP-based C2" in tags
 
     def test_no_tags_for_clean_url(self):
         tags = map_to_mitre(self._base_features(), self._base_intel(),
