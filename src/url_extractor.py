@@ -33,6 +33,15 @@ class URLFeatureExtractor:
         except Exception:
             return None
 
+    def _safe_port(self) -> bool:
+        """Return True if a non-standard port is present in the URL.
+        urllib.parse.port raises ValueError for malformed values (e.g. a space),
+        so we guard against that here."""
+        try:
+            return bool(self.parsed.port)
+        except ValueError:
+            return False
+
     def extract(self) -> dict:
         if not self.parsed:
             return {"error": "Could not parse URL", "url": self.raw_url}
@@ -66,7 +75,7 @@ class URLFeatureExtractor:
                     "hex_encoding": bool(re.search(r"%[0-9a-fA-F]{2}", full)),
                     "ip_in_url": bool(re.search(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", full)),
                     "uses_ip_as_host": bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}", domain)),
-                    "port_in_url": bool(self.parsed.port),
+                    "port_in_url": self._safe_port(),
 
                     # Protocol
                     "uses_https": self.parsed.scheme == "https",
@@ -151,8 +160,13 @@ class URLFeatureExtractor:
         return False
 
     def _find_all_labels(self, text: str, keywords: list) -> list:
-        return [kw for kw in keywords
-                if re.search(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])", text)]
+        """Return all keyword matches (whole-token, deduplicated)."""
+        found = []
+        for kw in keywords:
+            if re.search(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])", text):
+                if kw not in found:
+                    found.append(kw)
+        return found
 
     def _find_brands_in_domain(self, domain: str) -> list:
         """Return brand names found as full domain labels or within hyphenated labels."""
@@ -177,19 +191,21 @@ class URLFeatureExtractor:
 
     def _detect_brand_impersonation(self, domain: str) -> bool:
         """Detect if a brand appears in the domain but the domain is not
-        the brand's own official domain.
+        the legitimate brand domain.
 
-        Matching strategy — checks two levels:
-        1. Exact label match: 'paypal' in ['secure', 'paypal', 'evil', 'com']
-        2. Hyphenated segment: 'microsoft' in 'microsoft-account-update' (split by '-')
-
-        Legitimate check: brand IS the registered domain label (SLD),
-        regardless of TLD — handles paypal.de, microsoft.co.uk, etc.
+        Logic:
+          - Split domain into labels and look for any brand keyword.
+          - Also check hyphenated segments within a label.
+          - If found: only return False when the REGISTERED label exactly
+            equals the brand (e.g. paypal.com, paypal.de -> legit).
+          - Otherwise (brand in subdomain, brand in compound label, brand
+            after dot-as-fake-path) -> impersonation.
         """
         if self._is_ip(domain):
             return False
-        labels = [p for p in domain.split(".") if p]
-        registered = labels[-2] if len(labels) >= 2 else (labels[0] if labels else "")
+
+        registered = self._registered_label(domain)
+        labels = [p for p in domain.replace(":", "").split(".") if p]
 
         for brand in BRAND_KEYWORDS:
             brand_present = False
@@ -223,10 +239,6 @@ class URLFeatureExtractor:
                         return True
         return False
 
-    # ------------------------------------------------------------------
-    # Typosquatting / homoglyph detection
-    # ------------------------------------------------------------------
-
     def _detect_typosquatting(self, domain: str) -> bool:
         """Detect common typosquatting techniques:
         1. Homoglyph substitution (paypa1.com, m1crosoft.com)
@@ -258,27 +270,17 @@ class URLFeatureExtractor:
 
         return False
 
-    @staticmethod
-    def _edit_distance_1(a: str, b: str) -> bool:
-        """Return True if strings a and b have Levenshtein distance exactly 1."""
-        la, lb = len(a), len(b)
-        if abs(la - lb) > 1:
+    def _edit_distance_1(self, a: str, b: str) -> bool:
+        """Return True if strings a and b differ by exactly one edit
+        (insertion, deletion, or substitution).  O(n) for |len(a)-len(b)|>1."""
+        if abs(len(a) - len(b)) > 1:
             return False
-        if la == lb:
-            diffs = [i for i in range(la) if a[i] != b[i]]
-            if len(diffs) == 1:
-                return True
-            if len(diffs) == 2 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]:
-                return True
-            return False
-        shorter, longer = (a, b) if la < lb else (b, a)
+        if len(a) == len(b):
+            return sum(x != y for x, y in zip(a, b)) == 1
+        if len(a) > len(b):
+            a, b = b, a
+        # len(b) == len(a) + 1 — check for single insertion
         i = 0
-        skipped = False
-        for j in range(len(longer)):
-            if i < len(shorter) and shorter[i] == longer[j]:
-                i += 1
-            elif skipped:
-                return False
-            else:
-                skipped = True
-        return True
+        while i < len(a) and a[i] == b[i]:
+            i += 1
+        return a[i:] == b[i + 1:]
