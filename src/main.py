@@ -161,11 +161,23 @@ Examples:
   python main.py -f data/sample_urls/urls.txt
   python main.py -u "http://paypa1.com/verify" --verbose --export
 """)
-    parser.add_argument("-u", "--url", help="Single URL to analyze")
-    parser.add_argument("-f", "--file", help="File with URLs (one per line)")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show detailed output")
-    parser.add_argument("--export", action="store_true", help="Export JSON report to /reports")
-    parser.add_argument("--config", default="config/config.json", help="Path to config file")
+    parser.add_argument("-u", "--url",
+                        help="Single URL to analyze")
+    parser.add_argument("-f", "--file",
+                        help="File with URLs (one per line)")
+    parser.add_argument("-v", "--verbose",
+                        action="store_true",
+                        help="Show detailed output")
+    parser.add_argument("--export",
+                        action="store_true",
+                        help="Export JSON report to /reports")
+    parser.add_argument("--csv",
+                        action="store_true",
+                        help="Also export a CSV summary to reports/")
+    parser.add_argument("--config",
+                        default="config/config.json",
+                        help="Path to config file")
+
     args = parser.parse_args()
 
     if not args.url and not args.file:
@@ -213,6 +225,14 @@ Examples:
             print(f"\n[+] Report exported: {report_path}")
         except OSError as e:
             print(f"[!] Could not write report: {e}")
+
+    if args.csv:
+        reporter = ReportGenerator()
+        try:
+            csv_path = reporter.export_csv(results)
+            print(f"\n[+] CSV exported:    {csv_path}")
+        except OSError as e:
+            print(f"[!] Could not write CSV: {e}")
 
     if len(results) > 1:
         print(f"\n{'='*55}")

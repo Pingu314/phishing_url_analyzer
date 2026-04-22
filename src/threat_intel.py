@@ -157,7 +157,7 @@ class ThreatIntelEnricher:
             if isinstance(created, list):
                 created = created[0]
             if isinstance(created, datetime.datetime):
-                age = (datetime.datetime.utcnow() - created).days
+                age = (datetime.datetime.now(datetime.timezone.utc) - created.replace(tzinfo=datetime.timezone.utc)).days
                 result["domain_age_days"] = age
                 result["creation_date"] = created.date().isoformat()
                 result["whois_available"] = True

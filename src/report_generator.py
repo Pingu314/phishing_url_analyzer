@@ -1,51 +1,63 @@
 """
 Report Generator
-Exports analysis results to timestamped JSON files in /reports.
-
-Designed as a stable output interface so soc_threat_analyzer can
-consume the same JSON schema without modification.
+Serializes analysis results to JSON and/or CSV.
 """
-
+import csv
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Keep in sync with map_to_mitre() in main.py
-MITRE_COVERAGE = ["T1566",          # Phishing (VT/URLScan confirmed)
-                  "T1566.002",      # Spearphishing Link (brand impersonation / typosquatting)
-                  "T1027",          # Obfuscated Files or Information (redirects, hex encoding)
-                  "T1659",          # Content Injection / Redirect (domain switch mid-chain)
-                  "T1583.005",      # Botnet / IP-based C2 (IP as host)
-                  "T1105" ]         # Ingress Tool Transfer (.exe/.ps1/payload in path)
-
 
 class ReportGenerator:
-    def __init__(self, output_dir: str = "reports"):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+
+    REPORT_DIR = Path("reports")
+
+    def _ensure_dir(self) -> None:
+        self.REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _timestamp(self) -> str:
+        return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     def export(self, results: list) -> str:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        filename = f"phishing_analysis_{timestamp}.json"
-        filepath = self.output_dir / filename
+        """Write results to a timestamped JSON file. Returns the file path."""
+        self._ensure_dir()
+        filename = self.REPORT_DIR / f"report_{self._timestamp()}.json"
+        with open(filename, "w") as f:
+            json.dump(results, f, indent=2, default=str)
+        return str(filename)
 
-        report = {"generated_at": datetime.now(timezone.utc).isoformat(),
-                  "tool": "Phishing URL Analyzer",
-                  "mitre_coverage": MITRE_COVERAGE,
-                  "total_urls": len(results),
-                  "summary": self._summarize(results),
-                  "results": results}
+    def export_csv(self, results: list) -> str:
+        """Write a flat summary CSV — one row per URL. Returns the file path."""
+        self._ensure_dir()
+        filename = self.REPORT_DIR / f"report_{self._timestamp()}.csv"
 
-        with open(filepath, "w") as f:
-            json.dump(report, f, indent=2)
+        fieldnames = ["url", "verdict", "score", "final_url", "redirect_hops", "brand_impersonation",
+                      "typosquatting", "cloud_hosting_abuse", "private_ip", "uses_ip_as_host", "suspicious_tld",
+                      "domain_age_days", "vt_malicious", "urlscan_malicious", "mitre_tags" ]
 
-        return str(filepath)
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f,
+                                    fieldnames=fieldnames,
+                                    extrasaction="ignore")
+            writer.writeheader()
+            for r in results:
+                features = r.get("features", {})
+                intel    = r.get("threat_intel", {})
+                risk     = r.get("risk", {})
+                writer.writerow({"url":                 r.get("url", ""),
+                                 "verdict":             risk.get("verdict", ""),
+                                 "score":               risk.get("score", 0),
+                                 "final_url":           r.get("final_url", ""),
+                                 "redirect_hops":       r.get("redirect_chain", {}).get("hop_count", 0),
+                                 "brand_impersonation": features.get("brand_impersonation", False),
+                                 "typosquatting":       features.get("typosquatting", False),
+                                 "cloud_hosting_abuse": features.get("cloud_hosting_abuse", False),
+                                 "private_ip":          features.get("private_ip", False),
+                                 "uses_ip_as_host":     features.get("uses_ip_as_host", False),
+                                 "suspicious_tld":      features.get("suspicious_tld", False),
+                                 "domain_age_days":     intel.get("domain_age_days", ""),
+                                 "vt_malicious":        intel.get("vt_malicious", 0),
+                                 "urlscan_malicious":   intel.get("urlscan_malicious", False),
+                                 "mitre_tags":          "|".join(r.get("mitre", []))    })
 
-    def _summarize(self, results: list) -> dict:
-        if not results:
-            return {"MALICIOUS": 0, "SUSPICIOUS": 0, "BENIGN": 0, "avg_score": 0}
-        verdicts = [r["risk"]["verdict"] for r in results]
-        return {"MALICIOUS": verdicts.count("MALICIOUS"),
-                "SUSPICIOUS": verdicts.count("SUSPICIOUS"),
-                "BENIGN": verdicts.count("BENIGN"),
-                "avg_score": round(sum(r["risk"]["score"] for r in results) / len(results), 1)}
+        return str(filename)
