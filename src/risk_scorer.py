@@ -46,6 +46,9 @@ class RiskScorer:
         if features.get("uses_ip_as_host"):
             add("uses_ip_as_host", WEIGHTS["uses_ip_as_host"])
 
+        if features.get("private_ip"):
+            add("private_ip", WEIGHTS["private_ip"])
+
         if features.get("redirect_domain_switch"):
             add("redirect_domain_switch", WEIGHTS["redirect_domain_switch"])
 

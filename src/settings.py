@@ -31,15 +31,15 @@ HOMOGLYPH_MAP = {"0": "o", "1": "l", "3": "e", "4": "a", "5": "s",
 # Cloud / object-storage hosting domains abused to serve phishing pages.
 # Matches the registered domain label (storage.googleapis.com → "googleapis",
 # s3.amazonaws.com → "amazonaws", etc.)
-CLOUD_HOSTING_DOMAINS = ["googleapis",    # storage.googleapis.com  (GCS)
-                         "amazonaws",     # s3.amazonaws.com / s3-*.amazonaws.com
-                         "azureedge",     # Azure CDN
-                         "azurewebsites", # Azure App Service
-                         "blob",          # Azure Blob (*.blob.core.windows.net)
-                         "cloudfront",    # AWS CloudFront
+CLOUD_HOSTING_DOMAINS = ["googleapis",          # storage.googleapis.com  (GCS)
+                         "amazonaws",           # s3.amazonaws.com / s3-*.amazonaws.com
+                         "azureedge",           # Azure CDN
+                         "azurewebsites",       # Azure App Service
+                         "blob",                # Azure Blob (*.blob.core.windows.net)
+                         "cloudfront",          # AWS CloudFront
                          "digitaloceanspaces",  # DigitalOcean Spaces
-                         "backblazeb2",   # Backblaze B2
-                         "r2.dev" ]       # Cloudflare R2 public buckets
+                         "backblazeb2",         # Backblaze B2
+                         "r2.dev" ]             # Cloudflare R2 public buckets
 
 # TLD lists
 SUSPICIOUS_TLDS = [".xyz", ".tk", ".ml", ".ga", ".cf", ".gq", ".top", ".club", ".click", ".link", ".live", ".online",
@@ -60,8 +60,9 @@ WEIGHTS = {# High-signal
            "brand_impersonation":    18,
            "brand_in_subdomain":     15,
            "uses_ip_as_host":        15,
+           "private_ip":             10,   # RFC1918 host - almost certainly internal recon/C2
            "typosquatting":          18,   # homoglyph / edit-distance brand hit
-           "cloud_hosting_abuse":    18,   # T1583.006 — payload hosted on cloud storage
+           "cloud_hosting_abuse":    18,   # T1583.006 - payload hosted on cloud storage
 
            # Medium-signal
            "redirect_domain_switch": 12,

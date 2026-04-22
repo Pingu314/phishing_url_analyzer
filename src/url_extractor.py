@@ -7,6 +7,7 @@ without making any network requests.
 import re
 import math
 import urllib.parse
+import ipaddress
 from typing import Optional
 
 from settings import (BRAND_KEYWORDS, SUSPICIOUS_KEYWORDS, SUSPICIOUS_TLDS, LEGITIMATE_TLDS,
@@ -68,6 +69,7 @@ class URLFeatureExtractor:
                     "hex_encoding": bool(re.search(r"%[0-9a-fA-F]{2}", full)),
                     "ip_in_url": bool(re.search(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", full)),
                     "uses_ip_as_host": bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}", domain)),
+                    "private_ip": self._is_private_ip(domain),
                     "port_in_url": self._safe_port(),
 
                     # Protocol
@@ -114,6 +116,23 @@ class URLFeatureExtractor:
 
     def _is_ip(self, domain: str) -> bool:
         return bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}(:\d+)?$", domain))
+
+    def _is_private_ip(self, domain: str) -> bool:
+        """Return True if the host is an RFC 1918 / loopback / link-local IP.
+
+        Covers:
+          10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16,
+          127.0.0.0/8 (loopback), 169.254.0.0/16 (link-local).
+        """
+        if not self._is_ip(domain):
+            return False
+        try:
+            # strip optional port before parsing
+            ip_str = domain.split(":")[0]
+            ip = ipaddress.ip_address(ip_str)
+            return ip.is_private or ip.is_loopback or ip.is_link_local
+        except ValueError:
+            return False
 
     def _is_cloud_hosted(self, domain: str) -> bool:
         """Return True when the URL is hosted on a public cloud / object-storage
