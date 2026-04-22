@@ -81,6 +81,7 @@ WEIGHTS = {# High-signal
            "high_path_entropy":       6,   # random-looking path segment (bucket names, tokens)
            "long_url":                4,   # url length > 75
            "many_hops":               4,   # redirect hops > 1 (excluding origin)
+           "new_domain":              8,   # domain registered < 30 days ago (WHOIS)
            "many_hyphens":            3,
            "deep_path":               3,
            "many_subdomains":         3,

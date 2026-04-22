@@ -13,6 +13,8 @@ import urllib.parse
 import urllib.request
 import urllib.error
 import json
+import datetime
+import whois
 from typing import Optional
 
 
@@ -53,6 +55,10 @@ class ThreatIntelEnricher:
                 intel.update(urlscan_result)
         else:
             intel["enrichment_errors"].append("URLScan.io: no API key configured")
+
+        # WHOIS age — offline-safe, skipped when python-whois not installed
+        domain = urllib.parse.urlparse(url if url.startswith("http") else "http://" + url).netloc.split(":")[0]
+        intel.update(self._query_whois(domain))
 
         return intel
 
@@ -134,10 +140,27 @@ class ThreatIntelEnricher:
                             "urlscan_link": f"https://urlscan.io/result/{scan_uuid}/"}
                 except urllib.error.HTTPError as e:
                     if e.code == 404:
-                        continue   # Not ready yet — keep polling
+                        continue   # Not ready yet - keep polling
                     raise
 
             return {"enrichment_errors": [f"URLScan: result not ready after polling"]}
 
         except Exception as e:
             return {"enrichment_errors": [f"URLScan error: {str(e)}"]}
+
+    def _query_whois(self, domain: str) -> dict:
+        """WHOIS domain age lookup. Fails silently if python-whois not installed."""
+        result = {"domain_age_days": None, "creation_date": None, "whois_available": False}
+        try:
+            w = whois.whois(domain)
+            created = w.creation_date
+            if isinstance(created, list):
+                created = created[0]
+            if isinstance(created, datetime.datetime):
+                age = (datetime.datetime.utcnow() - created).days
+                result["domain_age_days"] = age
+                result["creation_date"] = created.date().isoformat()
+                result["whois_available"] = True
+        except Exception:
+            pass
+        return result

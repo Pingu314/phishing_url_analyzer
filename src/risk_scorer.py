@@ -95,6 +95,10 @@ class RiskScorer:
         if features.get("redirect_count", 0) > 1:
             add("many_hops", WEIGHTS["many_hops"])
 
+        age = intel.get("domain_age_days")
+        if age is not None and age < 30:
+            add("new_domain", WEIGHTS["new_domain"])
+
         if features.get("hyphen_count", 0) > 3:
             add("many_hyphens", WEIGHTS["many_hyphens"])
 
