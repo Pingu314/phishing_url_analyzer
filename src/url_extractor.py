@@ -61,6 +61,7 @@ class URLFeatureExtractor:
 
                     # Entropy (computed on the registered domain label, not www or IP)
                     "domain_entropy": self._shannon_entropy(self._registered_label(domain)),
+                    "path_entropy": self._max_path_segment_entropy(path),
 
                     # Special character features
                     "hyphen_count": full.count("-"),
@@ -164,6 +165,18 @@ class URLFeatureExtractor:
             return 0.0
         freq = {c: s.count(c) / len(s) for c in set(s)}
         return round(-sum(p * math.log2(p) for p in freq.values()), 3)
+
+    def _max_path_segment_entropy(self, path: str) -> float:
+        """Return the highest Shannon entropy among all non-empty path segments.
+
+        Ignores segments shorter than 6 characters to avoid noise from short
+        slugs like 'en' or 'v2'.  Returns 0.0 when the path is empty or has
+        no qualifying segment.
+        """
+        segments = [s for s in path.split("/") if len(s) >= 6]
+        if not segments:
+            return 0.0
+        return max(self._shannon_entropy(s) for s in segments)
 
 
     # Keyword / brand matching helpers

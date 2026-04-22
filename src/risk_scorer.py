@@ -85,6 +85,9 @@ class RiskScorer:
         if features.get("domain_entropy", 0) > 3.8:
             add("high_entropy", WEIGHTS["high_entropy"])
 
+        if features.get("path_entropy", 0) > 3.5:
+            add("high_path_entropy", WEIGHTS["high_path_entropy"])
+
         if features.get("url_length", 0) > 75:
             add("long_url", WEIGHTS["long_url"])
 

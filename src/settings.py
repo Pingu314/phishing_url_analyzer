@@ -78,6 +78,7 @@ WEIGHTS = {# High-signal
 
            # Soft signals
            "high_entropy":            5,   # domain entropy > 3.8
+           "high_path_entropy":       6,   # random-looking path segment (bucket names, tokens)
            "long_url":                4,   # url length > 75
            "many_hops":               4,   # redirect hops > 1 (excluding origin)
            "many_hyphens":            3,
