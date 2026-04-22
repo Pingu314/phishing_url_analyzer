@@ -206,7 +206,7 @@ Examples:
         result = analyze_url(url, config, verbose=args.verbose)
         results.append(result)
 
-    if args.export:
+    if args.export or args.file:  # auto-export when batch mode used
         reporter = ReportGenerator()
         try:
             report_path = reporter.export(results)
