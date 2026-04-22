@@ -10,7 +10,7 @@ import urllib.parse
 from typing import Optional
 
 from settings import (BRAND_KEYWORDS, SUSPICIOUS_KEYWORDS, SUSPICIOUS_TLDS, LEGITIMATE_TLDS,
-                      HOMOGLYPH_MAP, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS)
+                      HOMOGLYPH_MAP, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS, CLOUD_HOSTING_DOMAINS)
 
 
 class URLFeatureExtractor:
@@ -96,7 +96,10 @@ class URLFeatureExtractor:
 
                     # Malware delivery signals (pre-computed for MITRE mapping)
                     "malware_extension": any(ext in path for ext in MALWARE_EXTENSIONS),
-                    "malware_path_keyword": any(kw in path for kw in MALWARE_PATH_KEYWORDS)}
+                    "malware_path_keyword": any(kw in path for kw in MALWARE_PATH_KEYWORDS),
+
+                    # Cloud / object-storage abuse (T1583.006)
+                    "cloud_hosting_abuse": self._is_cloud_hosted(domain)}
 
         return features
 
@@ -111,6 +114,19 @@ class URLFeatureExtractor:
 
     def _is_ip(self, domain: str) -> bool:
         return bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}(:\d+)?$", domain))
+
+    def _is_cloud_hosted(self, domain: str) -> bool:
+        """Return True when the URL is hosted on a public cloud / object-storage
+        service known to be abused for phishing payload delivery (T1583.006).
+
+        We match against domain *labels* so that deep paths such as
+        storage.googleapis.com/bucket/phish.html are caught regardless of
+        subdomain depth.
+        """
+        if not domain:
+            return False
+        labels = domain.replace(":", "").split(".")
+        return any(label in CLOUD_HOSTING_DOMAINS for label in labels)
 
     def _registered_label(self, domain: str) -> str:
         """Return the second-level label (e.g. 'google' from 'www.google.com').

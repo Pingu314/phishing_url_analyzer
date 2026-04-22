@@ -128,6 +128,10 @@ def map_to_mitre(features: dict, intel: dict, redirect_data: dict) -> list:
     if features.get("uses_ip_as_host"):
         tags.append("T1583.005 - Botnet / IP-based C2")
 
+    # T1583.006 — Web Services / Cloud Storage
+    if features.get("cloud_hosting_abuse"):
+        tags.append("T1583.006 - Web Services / Cloud Storage")
+
     # T1105 — Ingress Tool Transfer (malware delivery via URL)
     if features.get("malware_extension") or features.get("malware_path_keyword"):
         tags.append("T1105 - Ingress Tool Transfer")

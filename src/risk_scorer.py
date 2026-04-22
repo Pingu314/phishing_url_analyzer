@@ -40,6 +40,9 @@ class RiskScorer:
         if features.get("brand_in_subdomain"):
             add("brand_in_subdomain", WEIGHTS["brand_in_subdomain"])
 
+        if features.get("cloud_hosting_abuse"):
+            add("cloud_hosting_abuse", WEIGHTS["cloud_hosting_abuse"])
+
         if features.get("uses_ip_as_host"):
             add("uses_ip_as_host", WEIGHTS["uses_ip_as_host"])
 
