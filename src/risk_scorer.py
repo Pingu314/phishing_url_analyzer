@@ -7,7 +7,7 @@ Scoring is intentionally rule-based and transparent —
 every point can be explained in an interview or incident report.
 """
 
-from settings import WEIGHTS, THRESHOLDS, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS
+from config.settings import WEIGHTS, THRESHOLDS, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS
 
 
 class RiskScorer:

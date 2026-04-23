@@ -18,13 +18,13 @@ cd phishing_url_analyzer
 pip install -r requirements.txt
 
 # Single URL (no API keys needed)
-python src/main.py -u "http://paypal-login.tk/verify"
+python -m src.main -u "http://paypal-login.tk/verify"
 
 # Batch mode
-python src/main.py -f data/sample_urls/urls.txt
+python -m src.main -f data/sample_urls/urls.txt
 
 # With threat intelligence (add API keys to config/config.json first)
-python src/main.py -u "http://suspicious.xyz" --export --verbose
+python -m src.main -u "http://suspicious.xyz" --export --verbose
 ```
 
 ---
@@ -76,4 +76,4 @@ The tool runs fully offline without keys — threat intel stages are skipped gra
 
 ```bash
 pip install pytest
-pytest tests/ -v
+python -m pytest tests/ -v

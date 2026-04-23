@@ -11,7 +11,7 @@ import urllib.error
 import urllib.parse
 import socket
 
-from settings import MAX_HOPS, REQUEST_TIMEOUT
+from config.settings import MAX_HOPS, REQUEST_TIMEOUT
 
 
 class RedirectFollower:

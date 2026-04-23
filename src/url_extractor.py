@@ -10,7 +10,7 @@ import urllib.parse
 import ipaddress
 from typing import Optional
 
-from settings import (BRAND_KEYWORDS, SUSPICIOUS_KEYWORDS, SUSPICIOUS_TLDS, LEGITIMATE_TLDS,
+from config.settings import (BRAND_KEYWORDS, SUSPICIOUS_KEYWORDS, SUSPICIOUS_TLDS, LEGITIMATE_TLDS,
                       HOMOGLYPH_MAP, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS, CLOUD_HOSTING_DOMAINS)
 
 
