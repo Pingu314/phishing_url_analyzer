@@ -12,6 +12,18 @@ from config.settings import WEIGHTS, THRESHOLDS, MALWARE_EXTENSIONS, MALWARE_PAT
 
 class RiskScorer:
 
+    def _confidence(self, features: dict, intel: dict, fired_count: int) -> str:
+        """Return HIGH/MEDIUM/LOW/VERY_LOW based on signal count and TI coverage."""
+        has_ti = intel.get("vt_malicious", 0) > 0 or intel.get("urlscan_malicious", False)
+        if has_ti and fired_count >= 3:
+            return "HIGH"
+        elif fired_count >= 4 or has_ti:
+            return "MEDIUM"
+        elif fired_count >= 2:
+            return "LOW"
+        else:
+            return "VERY_LOW"
+
     def score(self, features: dict, intel: dict) -> dict:
         breakdown = {}
         total = 0
@@ -121,4 +133,5 @@ class RiskScorer:
 
         return {"score": final_score,
                 "verdict": verdict,
+                "confidence": self._confidence(features, intel, len(breakdown)),
                 "breakdown": breakdown}
