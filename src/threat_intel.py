@@ -18,6 +18,29 @@ import whois
 from typing import Optional
 
 
+def _urlopen_with_retry(req: urllib.request.Request, max_retries: int = 3, timeout: int = 10,) -> bytes:
+    """
+    Open a urllib Request with exponential backoff on 429 / 5xx.
+    Returns response body as bytes, raises on final failure.
+    """
+    last_exc: Exception = RuntimeError("No attempts made")
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            last_exc = exc
+            if exc.code == 429:
+                wait = int(exc.headers.get("Retry-After", 2 ** (attempt + 1)))
+                time.sleep(wait)
+            elif exc.code >= 500:
+                time.sleep(2 ** attempt)
+            else:
+                raise
+        except urllib.error.URLError:
+            raise
+    raise last_exc
+
 class ThreatIntelEnricher:
     def __init__(self, config: dict):
         self.vt_api_key = config.get("virustotal_api_key", "")
@@ -71,8 +94,7 @@ class ThreatIntelEnricher:
             endpoint = f"https://www.virustotal.com/api/v3/urls/{url_id}"
 
             req = urllib.request.Request(endpoint, headers={"x-apikey": self.vt_api_key})
-            with urllib.request.urlopen(req, timeout=10) as response:
-                data = json.loads(response.read())
+            data = json.loads(_urlopen_with_retry(req))
 
             stats = data["data"]["attributes"]["last_analysis_stats"]
             return {"vt_checked": True,
@@ -99,8 +121,7 @@ class ThreatIntelEnricher:
                                          data=data,
                                          headers={"x-apikey": self.vt_api_key},
                                          method="POST")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                result = json.loads(response.read())
+            result = json.loads(_urlopen_with_retry(req))
             analysis_id = result["data"]["id"]
             return {"vt_checked": True,
                     "vt_note": "URL submitted for analysis (not yet in database)",
@@ -117,8 +138,7 @@ class ThreatIntelEnricher:
                                          headers={"API-Key": self.urlscan_api_key,
                                                   "Content-Type": "application/json"},
                                          method="POST")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                submit_data = json.loads(response.read())
+            submit_data = json.loads(_urlopen_with_retry(req))
 
             scan_uuid = submit_data.get("uuid")
             if not scan_uuid:
