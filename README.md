@@ -42,7 +42,7 @@ Edit `config/config.json`:
 
 Free keys: [VirusTotal](https://www.virustotal.com/gui/join-us) | [URLScan.io](https://urlscan.io/user/signup)
 
-The tool runs fully offline without keys — threat intel stages are skipped gracefully.
+The tool runs fully offline without keys - threat intel stages are skipped gracefully.
 
 ---
 
