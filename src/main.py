@@ -215,21 +215,20 @@ Examples:
         result = analyze_url(url, config, verbose=args.verbose)
         results.append(result)
 
-    if args.export or args.file:  # auto-export when batch mode used
+    if args.export or args.file or args.csv: 
         reporter = ReportGenerator()
-        try:
-            report_path = reporter.export(results)
-            print(f"\n[+] Report exported: {report_path}")
-        except OSError as e:
-            print(f"[!] Could not write report: {e}")
-
-    if args.csv:
-        reporter = ReportGenerator()
-        try:
-            csv_path = reporter.export_csv(results)
-            print(f"\n[+] CSV exported:    {csv_path}")
-        except OSError as e:
-            print(f"[!] Could not write CSV: {e}")
+        if args.export or args.file:
+            try:
+                report_path = reporter.export(results)
+                print(f"\n[+] Report exported: {report_path}")
+            except OSError as e:
+                print(f"[!] Could not write report: {e}")
+        if args.csv:
+            try:
+                csv_path = reporter.export_csv(results)
+                print(f"\n[+] CSV exported:    {csv_path}")
+            except OSError as e:
+                print(f"[!] Could not write CSV: {e}")
 
     if len(results) > 1:
         print(f"\n{'='*55}")
