@@ -1,182 +1,160 @@
 # Phishing URL Analyzer
 
-Rule-based phishing URL analyzer with MITRE ATT&CK mapping, WHOIS enrichment and JSON/CSV export
-URL Input
-│
-▼
-RedirectFollower    ← follows up to 6 hops, detects domain switches
-│
-▼
-URLFeatureExtractor ← 25+ signals: brand, typosquatting, entropy, cloud abuse
-│
-▼
-ThreatIntelEnricher ← VirusTotal API · URLScan.io API · WHOIS
-│
-▼
-RiskScorer          ← weighted rule-based scoring (0–100) + confidence
-│
-▼
-ReportGenerator     ← JSON + CSV export with MITRE ATT&CK tags
+![CI](https://github.com/Pingu314/phishing_url_analyzer/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.12-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
----
+A SOC triage tool that analyzes URLs for phishing indicators, enriches them with threat intelligence, and maps findings to MITRE ATT&CK techniques. Built as a portfolio project to demonstrate Tier-1 SOC analyst workflows in code.
 
-## Quickstart
+## What it does
+
+Runs a five-stage pipeline for every URL submitted:
+
+1. **Redirect chain following** - tracks hops, detects domain switches
+2. **Feature extraction** - 25+ signals: brand impersonation, typosquatting, homoglyphs, entropy, cloud hosting abuse, malware extensions, private IPs, and more
+3. **Threat intelligence enrichment** - VirusTotal v3, URLScan.io, WHOIS domain age (all optional, degrades gracefully without API keys)
+4. **Risk scoring** - weighted, rule-based 0–100 score with BENIGN / SUSPICIOUS / MALICIOUS verdict and HIGH / MEDIUM / LOW / VERY_LOW confidence
+5. **MITRE ATT&CK mapping** - tags each result with relevant technique IDs
+
+## Installation
 
 ```bash
-git clone https://github.com/Pingu314/phishing_url_analyzer
+git clone https://github.com/Pingu314/phishing_url_analyzer.git
 cd phishing_url_analyzer
-pip install -r requirements.txt
-
-# Single URL - no API keys needed
-python src/main.py -u "http://paypal-login.tk/verify"
-
-# Verbose - shows per-signal feature breakdown
-python src/main.py -u "http://paypal-login.tk/verify" --verbose
-
-# Batch mode - auto-exports report.json to reports/
-python src/main.py -f data/sample_urls/urls.txt
-
-# Batch with CSV export
-python src/main.py -f data/sample_urls/urls.txt --csv
-
-# With threat intelligence (add API keys to config/config.json first)
-python src/main.py -u "http://suspicious.xyz" --verbose --export
+pip install -e ".[dev]"
+cp config/config.json.example config/config.json
+# Edit config/config.json and add your API keys (optional)
 ```
 
----
+## Usage
 
-## API Keys (Optional)
-
-Edit `config/config.json`:
-
-```json
-{
-  "virustotal_api_key": "YOUR_KEY_HERE",
-  "urlscan_api_key": "YOUR_KEY_HERE"
-}
+**Single URL:**
+```bash
+python -m src.main -u "http://paypa1.com/verify"
 ```
 
-Free keys: [VirusTotal](https://www.virustotal.com) | [URLScan.io](https://urlscan.io)
+**Batch file:**
+```bash
+python -m src.main -f data/sample_urls/urls.txt
+```
 
-The tool runs fully offline without keys - threat intel stages are skipped gracefully
+**With all options:**
+```bash
+python -m src.main -u "http://suspicious-site.com/login" --verbose --export --csv
+```
 
----
+| Flag | Description |
+|------|-------------|
+| `-u URL` | Single URL to analyze |
+| `-f FILE` | File with one URL per line (auto-exports JSON) |
+| `-v` / `--verbose` | Show full feature dict and intel output |
+| `--export` | Export JSON report to `reports/` |
+| `--csv` | Export CSV summary to `reports/` |
+| `--config PATH` | Path to config file (default: `config/config.json`) |
 
-## Risk Scoring
+## How scoring works
 
-| Signal | Points |
-|---|---|
-| VirusTotal malicious detections | +20 per engine (cap 40) |
-| URLScan.io malicious verdict | +20 |
-| Brand impersonation in domain | +18 |
-| Typosquatting / homoglyph hit | +18 |
-| Cloud storage hosting abuse (GCS, S3, Azure…) | +18 |
-| Brand name in subdomain | +15 |
-| IP address used as host | +15 |
-| Malware file extension (.exe, .ps1…) | +15 |
-| Redirect domain switch | +12 |
-| Suspicious TLD (.xyz, .tk, .ml…) | +10 |
-| Private IP (RFC 1918) as host | +10 |
-| New domain (< 30 days, via WHOIS) | +8 |
-| Malware path keyword (payload, dropper…) | +8 |
-| Suspicious keywords (login, verify…) | +8 |
-| @ symbol in URL | +8 |
-| No HTTPS | +7 |
-| High path-segment entropy | +6 |
-| Hex/percent encoding | +6 |
-| Open redirect parameter | +6 |
-| High domain entropy (> 3.8) | +5 |
-| URL length > 75 chars | +4 |
-| Many redirect hops (> 1) | +4 |
-| Many hyphens (> 3) | +3 |
-| Deep path (> 4 segments) | +3 |
-| Many subdomains (> 2) | +3 |
-| Non-standard port | +3 |
+Each signal adds a fixed number of points. Score is capped at 100.
 
-**Thresholds:** 0–20 = BENIGN / 21–49 = SUSPICIOUS / 50–100 = MALICIOUS
+| Signal | Weight | MITRE |
+|--------|--------|-------|
+| VirusTotal malicious engines | 20 × engines (max 40) | T1566 |
+| URLScan malicious verdict | 20 | T1566 |
+| Brand impersonation | 18 | T1566.002 |
+| Typosquatting (homoglyph/edit-distance) | 18 | T1566.002 |
+| Cloud hosting abuse | 18 | T1583.006 |
+| Private IP as host | 20 | T1583.005 |
+| Brand in subdomain | 15 | T1566.002 |
+| Malware extension in path | 15 | T1105 |
+| Uses IP as host | 15 | T1583.005 |
+| Redirect domain switch | 12 | T1659 |
+| Suspicious TLD | 10 | — |
+| New domain (< 30 days) | 8 | — |
+| Suspicious keywords in URL | 8 | T1566.002 |
+| Malware path keyword | 8 | T1105 |
+| At-symbol in URL | 8 | — |
+| No HTTPS | 7 | — |
+| High path entropy | 6 | T1027 |
+| Hex encoding | 6 | T1027 |
+| Redirect parameter | 6 | T1659 |
+| High domain entropy | 5 | — |
+| Double slash in path | 5 | — |
+| Long URL (> 75 chars) | 4 | — |
+| Many redirect hops (> 1) | 4 | T1027 |
+| Many hyphens (> 3) | 3 | — |
+| Deep path (> 4 levels) | 3 | — |
+| Many subdomains (> 2) | 3 | — |
+| Non-standard port | 3 | — |
 
-**Confidence:** HIGH / MEDIUM / LOW / VERY_LOW - reflects signal count and whether TI APIs confirmed the verdict
+**Verdict thresholds:** BENIGN 0–20 · SUSPICIOUS 21–49 · MALICIOUS 50–100
 
----
+**Confidence levels:**
 
-## MITRE ATT&CK Coverage
+| Level | Condition |
+|-------|-----------|
+| HIGH | TI confirms malicious AND 3+ signals fired |
+| MEDIUM | 4+ signals fired OR TI present |
+| LOW | 2–3 signals fired |
+| VERY_LOW | 0–1 signals fired |
 
-| Technique                                | Trigger |
-|------------------------------------------|---|
-| T1566 - Phishing                         | VirusTotal or URLScan confirmed |
-| T1566.002 - Spearphishing Link           | Brand impersonation, typosquatting, brand in subdomain |
-| T1583.005 - Botnet / IP-based C2         | IP address as host |
-| T1583.006 - Web Services / Cloud Storage | Cloud storage domain detected (GCS, S3, Azure…) |
-| T1027 - Obfuscated Files or Information  | Redirect hops or hex encoding |
-| T1659 - Content Injection / Redirect     | Domain switch detected in redirect chain |
-| T1105 - Ingress Tool Transfer            | Malware extension or path keyword |
+## Architecture
+URL input
+│
+▼
+RedirectFollower ──────────────────────────────► redirect_chain dict
+│
+▼
+URLFeatureExtractor (original URL) ────────────► features dict (25+ signals)
+│
+▼
+ThreatIntelEnricher (final URL) ───────────────► intel dict (VT · URLScan · WHOIS)
+│
+▼
+RiskScorer ────────────────────────────────────► {score, verdict, confidence, breakdown}
+│
+▼
+map_to_mitre ──────────────────────────────────► [T1566.002, T1027, ...]
+│
+▼
+ReportGenerator ───────────────────────────────► reports/report_YYYYMMDD_HHMMSS.json / .csv
 
----
-
-## Project Structure
+## Project structure
 phishing_url_analyzer/
-├── config/
-│   ├── config.json          # API keys (gitignored)
-│   └── settings.py          # Weights, brand lists, cloud domains, thresholds
-├── data/
-│   └── sample_urls/
-│       └── urls.txt         # Test URLs (benign / suspicious / malicious)
 ├── src/
-│   ├── main.py              # CLI entry point
-│   ├── url_extractor.py     # Feature extraction (25+ signals)
-│   ├── risk_scorer.py       # Scoring engine + confidence
-│   ├── threat_intel.py      # VirusTotal / URLScan.io / WHOIS
-│   ├── redirect_follower.py # HTTP redirect chain follower
-│   └── report_generator.py  # JSON + CSV export
+│   ├── url_extractor.py      # Feature extraction (25+ signals)
+│   ├── risk_scorer.py        # Weighted scoring + confidence
+│   ├── threat_intel.py       # VirusTotal · URLScan · WHOIS
+│   ├── redirect_follower.py  # Redirect chain follower
+│   ├── report_generator.py   # JSON + CSV export
+│   ├── mitre_mapper.py       # MITRE ATT&CK tag mapper
+│   └── main.py               # CLI entrypoint
+├── config/
+│   ├── settings.py           # All weights, lists, thresholds
+│   └── config.json.example   # API key template
 ├── tests/
-│   └── test_analyzer.py     # 63 unit tests
-├── pyproject.toml
-└── requirements.txt
+│   └── test_analyzer.py      # pytest test suite
+└── data/
+└── sample_urls/
+└── urls.txt          # Sample URLs for batch testing
 
----
-
-## CLI Reference
-python src/main.py [-u URL] [-f FILE] [-v] [--export] [--csv] [--config PATH]
--u URL        Single URL to analyze
--f FILE       File with URLs (one per line, # = comment)
--v            Verbose output — shows feature dict and intel
---export      Export JSON report to reports/  (auto-on for -f)
---csv         Also export a CSV summary to reports/
---config PATH Path to config JSON (default: config/config.json)
-
----
-
-## Tests
+## Running tests
 
 ```bash
-python -m pytest tests/
-python -m pytest tests/ --cov=src --cov=config --cov-report=term-missing
+pytest tests/ -v
+pytest tests/ --cov=src --cov-report=term-missing
 ```
-
----
-
-## Development
-
-```bash
-# Install dev + lint deps
-pip install -e ".[dev,lint]"
-
-# Lint
-flake8 src/ tests/ config/
-```
-
----
-
-## Limitations
-
-- Static URL analysis only - no JavaScript rendering
-- WHOIS lookups add 2–10s per URL depending on registrar
-- VirusTotal free tier: 4 requests/minute, 500/day
-- URLScan.io free tier: rate limited, ~15s per scan
-- Some privacy-protected domains return no WHOIS data
-
----
 
 ## Disclaimer
 
-For educational and portfolio purposes. Do not use to analyze URLs you do not have permission to scan.
+This tool is built for **educational and portfolio purposes** as part of a SOC analyst learning path (CompTIA Security+, TryHackMe SOC Level 1).
+
+- Do **not** use this tool to analyze URLs you do not have permission to test
+- Threat intelligence lookups (VirusTotal, URLScan.io) submit URLs to third-party services - do not analyze sensitive or internal URLs with API keys configured
+- Results are heuristic and rule-based - false positives and false negatives are expected
+- This is not a replacement for production security tooling
+
+
+## Roadmap
+
+- **P3** — `email_header_analyzer`: SPF/DKIM/DMARC parsing, Received-chain IP enrichment, embedded URL analysis via this library
+- **P4** — unified SOC triage interface combining phishing URL, email header, and IOC analysis into a single pipeline
