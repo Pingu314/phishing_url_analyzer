@@ -148,7 +148,7 @@ class URLFeatureExtractor:
             return False
         host = domain.split(":")[0].lower()
         return any(host == suffix or host.endswith("." + suffix) for suffix in CLOUD_HOSTING_DOMAINS)
-    
+
     def _registered_label(self, domain: str) -> str:
         """Return the second-level label (e.g. 'google' from 'www.google.com').
         Falls back sensibly for IPs or bare hostnames."""
