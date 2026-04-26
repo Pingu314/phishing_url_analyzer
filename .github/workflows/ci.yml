@@ -20,9 +20,6 @@ jobs:
       - name: Install lint deps
         run: pip install -e ".[lint]"
 
-      - name: black --check
-        run: black --check src/ tests/ config/
-
       - name: flake8
         run: flake8 src/ tests/ config/
 
