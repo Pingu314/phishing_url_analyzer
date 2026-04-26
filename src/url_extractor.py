@@ -137,18 +137,18 @@ class URLFeatureExtractor:
             return False
 
     def _is_cloud_hosted(self, domain: str) -> bool:
-        """Return True when the URL is hosted on a public cloud / object-storage
-        service known to be abused for phishing payload delivery (T1583.006).
+        """True when domain matches a known cloud storage/hosting suffix
 
-        We match against domain *labels* so that deep paths such as
-        storage.googleapis.com/bucket/phish.html are caught regardless of
-        subdomain depth.
+        Uses suffix matching against CLOUD_HOSTING_DOMAINS (full domain strings),
+        not label matching - prevents false positives like blobfish.com or
+        any domain that happens to contain 'blob' as a label
+        MITRE ATT&CK: T1583.006 - Web Services / Cloud Storage
         """
         if not domain:
             return False
-        labels = domain.replace(":", "").split(".")
-        return any(label in CLOUD_HOSTING_DOMAINS for label in labels)
-
+        host = domain.split(":")[0].lower()
+        return any(host == suffix or host.endswith("." + suffix) for suffix in CLOUD_HOSTING_DOMAINS)
+    
     def _registered_label(self, domain: str) -> str:
         """Return the second-level label (e.g. 'google' from 'www.google.com').
         Falls back sensibly for IPs or bare hostnames."""

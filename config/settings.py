@@ -1,46 +1,52 @@
 """
-settings.py — Central configuration for Phishing URL Analyzer.
+settings.py — Central configuration for Phishing URL Analyzer
 
 All tunable constants live here so every module (and a future
-soc_threat_analyzer integration) can import from one place.
+soc_threat_analyzer integration) can import from one place
 """
 
 # Brand / keyword lists
-# Brands commonly impersonated in phishing.
-# Each entry is the canonical second-level label (no TLD).
-# Used for label-aware matching only — do NOT use plain substring search.
+# Brands commonly impersonated in phishing
+# Each entry is the canonical second-level label (no TLD)
+# Used for label-aware matching only — do NOT use plain substring search
 BRAND_KEYWORDS = ["paypal", "apple", "microsoft", "google", "amazon", "netflix", "facebook", "instagram",
                   "linkedin", "twitter", "dropbox", "office365", "onedrive", "chase", "wellsfargo", "bankofamerica",
                   "ubs", "postfinance", "raiffeisen", "swisscom", "sbb", "post", "zkb", ]
 
-# Keywords that raise suspicion when found in the URL path/query.
+# Keywords that raise suspicion when found in the URL path/query
 SUSPICIOUS_KEYWORDS = ["login", "signin", "verify", "secure", "update", "confirm", "account", "banking", "password",
                        "credential", "validate", "suspended", "locked", "unusual", "activity", "click", "urgent",
                        "unsubscribe", "token", "reset", ]
 
-# Path-level keywords strongly associated with malware delivery.
+# Path-level keywords strongly associated with malware delivery
 MALWARE_PATH_KEYWORDS = ["payload", "dropper", "install", "setup", "download", ]
 
-# File extensions that are high-risk in a URL path.
+# File extensions that are high-risk in a URL path
 MALWARE_EXTENSIONS = [".exe", ".bat", ".ps1", ".vbs", ".jar", ".msi", ".scr", ".hta", ]
 
-# Common homoglyph / typo substitutions used in typosquatting.
-# Maps look-alike characters back to their ASCII equivalents.
+# Common homoglyph / typo substitutions used in typosquatting
+# Maps look-alike characters back to their ASCII equivalents
 HOMOGLYPH_MAP = {"0": "o", "1": "l", "3": "e", "4": "a", "5": "s",
                  "@": "a", "$": "s", "rn": "m", "vv": "w", }
 
-# Cloud / object-storage hosting domains abused to serve phishing pages.
-# Matches the registered domain label (storage.googleapis.com → "googleapis",
-# s3.amazonaws.com → "amazonaws", etc.)
-CLOUD_HOSTING_DOMAINS = ["googleapis",          # storage.googleapis.com  (GCS)
-                         "amazonaws",           # s3.amazonaws.com / s3-*.amazonaws.com
-                         "azureedge",           # Azure CDN
-                         "azurewebsites",       # Azure App Service
-                         "blob",                # Azure Blob (*.blob.core.windows.net)
-                         "cloudfront",          # AWS CloudFront
-                         "digitaloceanspaces",  # DigitalOcean Spaces
-                         "backblazeb2",         # Backblaze B2
-                         "r2.dev" ]             # Cloudflare R2 public buckets
+# Cloud / object-storage hosting domains abused to serve phishing pages
+# Full domain suffixes - used with endswith() matching in url_extractor.py
+# Add new entries here; do NOT use bare labels (e.g. "blob") -> too broad
+CLOUD_HOSTING_DOMAINS = ["storage.googleapis.com",       # GCS public buckets
+                         "s3.amazonaws.com",             # AWS S3
+                         "blob.core.windows.net",        # Azure Blob Storage
+                         "azureedge.net",                # Azure CDN
+                         "azurewebsites.net",            # Azure App Service
+                         "cloudfront.net",               # AWS CloudFront
+                         "digitaloceanspaces.com",       # DigitalOcean Spaces
+                         "backblazeb2.com",              # Backblaze B2
+                         "r2.dev",                       # Cloudflare R2 public buckets
+                         "pages.dev",                    # Cloudflare Pages
+                         "netlify.app",                  # Netlify
+                         "github.io",                    # GitHub Pages
+                         "web.app",                      # Firebase Hosting
+                         "firebaseapp.com",              # Firebase Hosting (legacy)
+                        ]
 
 # TLD lists
 SUSPICIOUS_TLDS = [".xyz", ".tk", ".ml", ".ga", ".cf", ".gq", ".top", ".club", ".click", ".link", ".live", ".online",
