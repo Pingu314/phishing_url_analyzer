@@ -9,6 +9,7 @@ import math
 import urllib.parse
 import ipaddress
 from typing import Optional
+from collections import Counter
 
 from config.settings import (BRAND_KEYWORDS, SUSPICIOUS_KEYWORDS, SUSPICIOUS_TLDS, LEGITIMATE_TLDS, HOMOGLYPH_MAP,
                              MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS, CLOUD_HOSTING_DOMAINS)
@@ -161,10 +162,14 @@ class URLFeatureExtractor:
 
     # Entropy
     def _shannon_entropy(self, s: str) -> float:
+        """Shannon entropy of string s (bits per character)
+        Uses Counter for O(n) performance instead of repeated .count() scans
+        """
         if not s:
             return 0.0
-        freq = {c: s.count(c) / len(s) for c in set(s)}
-        return round(-sum(p * math.log2(p) for p in freq.values()), 3)
+        n = len(s)
+        freq = Counter(s)
+        return round(-sum((c / n) * math.log2(c / n) for c in freq.values()), 3)
 
     def _max_path_segment_entropy(self, path: str) -> float:
         """Return the highest Shannon entropy among all non-empty path segments.
