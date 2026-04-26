@@ -15,7 +15,8 @@ BRAND_KEYWORDS = ["paypal", "apple", "microsoft", "google", "amazon", "netflix",
 
 # Keywords that raise suspicion when found in the URL path/query.
 SUSPICIOUS_KEYWORDS = ["login", "signin", "verify", "secure", "update", "confirm", "account", "banking", "password",
-                       "credential", "validate", "suspended", "locked", "unusual", "activity", "click", "urgent", ]
+                       "credential", "validate", "suspended", "locked", "unusual", "activity", "click", "urgent",
+                       "unsubscribe", "token", "reset", ]
 
 # Path-level keywords strongly associated with malware delivery.
 MALWARE_PATH_KEYWORDS = ["payload", "dropper", "install", "setup", "download", ]
