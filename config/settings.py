@@ -60,7 +60,7 @@ WEIGHTS = {# High-signal
            "brand_impersonation":    18,
            "brand_in_subdomain":     15,
            "uses_ip_as_host":        15,
-           "private_ip":             10,   # RFC1918 host - almost certainly internal recon/C2
+           "private_ip":             20,   # RFC1918 host - almost certainly internal recon/C2
            "typosquatting":          18,   # homoglyph / edit-distance brand hit
            "cloud_hosting_abuse":    18,   # T1583.006 - payload hosted on cloud storage
 
