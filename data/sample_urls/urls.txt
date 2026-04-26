@@ -1,19 +1,63 @@
 # Sample URLs for testing the Phishing URL Analyzer
 # Lines starting with # are ignored
-# Mix of benign, suspicious, and malicious-pattern URLs
+# One URL per line
 
-# Likely BENIGN
+# BENIGN
 https://www.google.com
 https://github.com/login
 https://postfinance.ch/en/private.html
 
-# SUSPICIOUS patterns
+# Legitimate marketing redirect -> benign redirect chain example
+https://clicks.thechosen.tv/f/a/04Zppb1WlQ7ru5Dx8ifaCg~~/AAQRxRA~/PrvR4NhaiL4r2Znnq5LEYoUZ-Pa
+
+
+# SUSPICIOUS
 http://paypal-secure-verify.com/login
 https://microsoft-account-update.xyz/verify?user=admin
+
+# Private IP (RFC 1918) — 192.168.x.x
 http://192.168.1.105/bank/login.php
 
-# High-risk / Malicious patterns
+# Private IP — 10.x.x.x
+http://10.0.0.1/admin/login.php
+
+# Private IP — 172.16.x.x
+http://172.16.254.1/portal/verify?session=abc123
+
+# Suspicious TLD + high path entropy
+https://liketolike.site/4miuDD705MfTZe156CKtE0fHy0OAmP0EPjE9
+
+# .click TLD + unusual path structure
+http://ldcdlffgrec.click/LEAVE=To
+
+# High-entropy throwaway domain + LEAVE redirect path
+http://voidhidshelrk.gxxe.de/LEAVE=To
+
+
+# MALICIOUS PATTERNS
+# Typosquatting + open redirect with encoded target
 http://paypa1.com/signin?redirect=http%3A%2F%2Fevil.com
+
+# Brand in subdomain + .tk TLD
 https://secure.apple.com.phishing-site.tk/id/verify
+
+# Public IP + malware path keyword + .exe extension
 http://185.220.101.55/payload/download.exe
+
+# Brand impersonation + suspicious TLD + encoded token
 https://www.paypal.com.account-login.top/confirm?token=abc123%2F%2Fevil
+
+# Cloud storage hosting abuse - bucket phishing page + base64 fragment (T1583.006)
+https://storage.googleapis.com/25kdhsale/NWBH25.html#?Z289MSZzMT0yMjc4NTcwJnMyPTI5NjcxMzQ2NCZzMz1HTEI=
+
+# Cloud storage abuse - sweepstakes lure, misspelled filename (T1583.006)
+https://storage.googleapis.com/bonus-lux-sweeps/colaboration-internatinal-dailydailydailyherewego.html#4JSjRN25073XDND307tspmpacads419VKJOYYPVSBABLXB446664/73687y9
+
+# Cloud storage abuse - spoof-named path, base64 fragment (T1583.006)
+https://storage.googleapis.com/locksoufbuck1/hreflysouf.html#?Z289MSZzMT0yMjY5NTYwJnMyPTI5NjcxMzQ2NCZzMz1HTEI=
+
+# Firebase auth token in URL path - encoded credential phishing
+http://taskerliquor.store/fwd/P2Q9MTkyMDgmZWk9MDAyJmlmPTQ0NDg0JmxpPTAwJnR5PTE=
+
+# Brand + redirect path keyword
+http://trulia.my/LEAVE=To
