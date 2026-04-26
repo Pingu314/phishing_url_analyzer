@@ -3,14 +3,11 @@ Unit tests for Phishing URL Analyzer
 Run: pytest tests/ -v
 """
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
-
 import pytest
-from url_extractor import URLFeatureExtractor
-from risk_scorer import RiskScorer
-from redirect_follower import RedirectFollower
-from main import map_to_mitre
+from src.url_extractor import URLFeatureExtractor
+from src.risk_scorer import RiskScorer
+from src.redirect_follower import RedirectFollower
+from src.main import map_to_mitre
 
 
 # Feature Extractor Tests
