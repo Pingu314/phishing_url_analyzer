@@ -1,3 +1,12 @@
-# Phishing URL Analyzer - Dependencies
-pytest>=7.0.0
-python-whois
+# Phishing URL Analyzer - runtime & dev dependencies
+# Runtime (canonical pins in pyproject.toml -> [project.dependencies])
+python-whois>=0.9
+
+# Dev / test
+pytest>=8
+pytest-cov>=4.1
+
+# Lint
+black>=24.0
+flake8>=7.0
+flake8-bugbear>=24.0
