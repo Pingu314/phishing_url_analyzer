@@ -7,7 +7,7 @@ import pytest
 from src.url_extractor import URLFeatureExtractor
 from src.risk_scorer import RiskScorer
 from src.redirect_follower import RedirectFollower
-from src.main import map_to_mitre
+from src.mitre_mapper import map_to_mitre
 
 
 # Feature Extractor Tests

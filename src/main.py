@@ -7,11 +7,12 @@ import json
 import sys
 from pathlib import Path
 
-from src.url_extractor import URLFeatureExtractor
-from src.threat_intel import ThreatIntelEnricher
-from src.risk_scorer import RiskScorer
-from src.report_generator import ReportGenerator
-from src.redirect_follower import RedirectFollower
+from url_extractor import URLFeatureExtractor
+from threat_intel import ThreatIntelEnricher
+from risk_scorer import RiskScorer
+from report_generator import ReportGenerator
+from redirect_follower import RedirectFollower
+from mitre_mapper import map_to_mitre
 
 
 def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
@@ -97,44 +98,6 @@ def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
     print(f"{'='*55}")
 
     return result
-
-
-def map_to_mitre(features: dict, intel: dict, redirect_data: dict) -> list:
-    tags = []
-
-    # T1566.002 — Spearphishing Link
-    # Requires brand impersonation OR typosquatting (high-confidence signals).
-    if (features.get("brand_impersonation") or features.get("typosquatting")
-            or features.get("brand_in_subdomain")):
-        tags.append("T1566.002 - Spearphishing Link")
-
-    # T1027 — Obfuscated Files or Information
-    # Triggered by actual redirects (hop_count > 0) or encoded characters.
-    if redirect_data.get("hop_count", 0) > 0 or features.get("hex_encoding"):
-        tags.append("T1027 - Obfuscated Files or Information")
-
-    # T1659 — Content Injection / Redirect
-    if redirect_data.get("domain_switches"):
-        tags.append("T1659 - Content Injection / Redirect")
-
-    # T1566 — Phishing (confirmed by external TI)
-    if intel.get("vt_malicious", 0) > 0 or intel.get("urlscan_malicious"):
-        tags.append("T1566 - Phishing")
-
-    # T1583.005 — Botnet / IP-based C2
-    if features.get("uses_ip_as_host"):
-        tags.append("T1583.005 - Botnet / IP-based C2")
-
-    # T1583.006 — Web Services / Cloud Storage
-    if features.get("cloud_hosting_abuse"):
-        tags.append("T1583.006 - Web Services / Cloud Storage")
-
-    # T1105 — Ingress Tool Transfer (malware delivery via URL)
-    if features.get("malware_extension") or features.get("malware_path_keyword"):
-        tags.append("T1105 - Ingress Tool Transfer")
-
-    return tags
-
 
 def load_config(config_path: str = "config/config.json") -> dict:
     path = Path(config_path)
