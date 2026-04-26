@@ -31,7 +31,7 @@ class ReportGenerator:
         self._ensure_dir()
         filename = self.REPORT_DIR / f"report_{self._timestamp()}.csv"
 
-        fieldnames = ["url", "verdict", "score", "confidence" "final_url", "redirect_hops", "brand_impersonation",
+        fieldnames = ["url", "verdict", "score", "confidence", "final_url", "redirect_hops", "brand_impersonation",
                       "typosquatting", "cloud_hosting_abuse", "private_ip", "uses_ip_as_host", "suspicious_tld",
                       "domain_age_days", "vt_malicious", "urlscan_malicious", "mitre_tags" ]
 

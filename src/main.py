@@ -215,7 +215,7 @@ Examples:
         result = analyze_url(url, config, verbose=args.verbose)
         results.append(result)
 
-    if args.export or args.file or args.csv: 
+    if args.export or args.file or args.csv:
         reporter = ReportGenerator()
         if args.export or args.file:
             try:
