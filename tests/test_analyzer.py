@@ -4,17 +4,24 @@ Run: pytest tests/ -v
 """
 
 import pytest
+import os
+import urllib.error
+import json as _json
+import csv as _csv
+from unittest.mock import patch
+
 from src.url_extractor import URLFeatureExtractor
+from src.report_generator import ReportGenerator
 from src.risk_scorer import RiskScorer
 from src.redirect_follower import RedirectFollower
 from src.mitre_mapper import map_to_mitre
+from src.threat_intel import ThreatIntelEnricher
 
 
 # Feature Extractor Tests
 class TestURLFeatureExtractor:
 
     # Brand impersonation (exact label)
-
     def test_brand_impersonation_detected(self):
         f = URLFeatureExtractor("http://paypal-secure.com/login").extract()
         assert f["brand_impersonation"] is True
@@ -48,7 +55,6 @@ class TestURLFeatureExtractor:
         assert f["brand_impersonation"] is False
 
     # Typosquatting
-
     def test_typosquatting_homoglyph_detected(self):
         """paypa1.com — '1' instead of 'l'."""
         f = URLFeatureExtractor("http://paypa1.com/signin").extract()
@@ -68,7 +74,6 @@ class TestURLFeatureExtractor:
         assert f["typosquatting"] is False
 
     # IP as host
-
     def test_ip_as_host(self):
         f = URLFeatureExtractor("http://192.168.1.1/login").extract()
         assert f["uses_ip_as_host"] is True
@@ -83,7 +88,6 @@ class TestURLFeatureExtractor:
         assert f["subdomain_count"] == 0
 
     # Entropy
-
     def test_entropy_uses_registered_label(self):
         """Entropy must be computed on the SLD label, not 'www'."""
         f_www = URLFeatureExtractor("https://www.google.com").extract()
@@ -95,13 +99,11 @@ class TestURLFeatureExtractor:
         assert isinstance(f["domain_entropy"], float)
 
     # TLD
-
     def test_suspicious_tld(self):
         f = URLFeatureExtractor("https://banking-secure.xyz/verify").extract()
         assert f["suspicious_tld"] is True
 
     # HTTPS
-
     def test_https_detected(self):
         f = URLFeatureExtractor("https://google.com").extract()
         assert f["uses_https"] is True
@@ -111,7 +113,6 @@ class TestURLFeatureExtractor:
         assert f["uses_https"] is False
 
     # Encoding / symbols
-
     def test_hex_encoding_detected(self):
         f = URLFeatureExtractor("http://evil.com/path%2Fevade%2F").extract()
         assert f["hex_encoding"] is True
@@ -121,7 +122,6 @@ class TestURLFeatureExtractor:
         assert f["at_symbol"] is True
 
     # Brand in subdomain
-
     def test_brand_in_subdomain(self):
         f = URLFeatureExtractor("http://paypal.evil.com/login").extract()
         assert f["brand_in_subdomain"] is True
@@ -131,25 +131,21 @@ class TestURLFeatureExtractor:
         assert f["brand_in_subdomain"] is False
 
     # Subdomain count
-
     def test_subdomain_count(self):
         f = URLFeatureExtractor("http://a.b.c.evil.com/login").extract()
         assert f["subdomain_count"] >= 3
 
     # Redirect param
-
     def test_redirect_param_detected(self):
         f = URLFeatureExtractor("http://site.com/page?next=http://evil.com").extract()
         assert f["has_redirect_param"] is True
 
     # URL length
-
     def test_url_length(self):
         f = URLFeatureExtractor("https://" + "a" * 80 + ".com").extract()
         assert f["url_length"] > 75
 
     # Suspicious keywords (label-aware)
-
     def test_suspicious_keywords_found(self):
         f = URLFeatureExtractor("http://evil.com/login/verify/account").extract()
         assert f["has_suspicious_keywords"] is True
@@ -161,7 +157,6 @@ class TestURLFeatureExtractor:
         assert f["brand_impersonation"] is False
 
     # Malware feature keys
-
     def test_malware_extension_key_present(self):
         """extract() must always return malware_extension key."""
         f = URLFeatureExtractor("https://google.com").extract()
@@ -447,3 +442,122 @@ class TestMapToMitre:
         tags = map_to_mitre(self._base_features(), self._base_intel(),
                             self._base_redirect())
         assert tags == []
+
+
+# ThreatIntelEnricher Tests (mocked)
+class TestThreatIntelEnricher:
+    def test_no_api_keys_returns_defaults(self):
+        enricher = ThreatIntelEnricher({})
+        result = enricher.enrich("http://example.com")
+        assert result["vt_checked"] is False
+        assert result["urlscan_checked"] is False
+        assert result["vt_malicious"] == 0
+
+    def test_no_vt_key_adds_error_message(self):
+        enricher = ThreatIntelEnricher({})
+        result = enricher.enrich("http://example.com")
+        assert any("VirusTotal" in e for e in result["enrichment_errors"])
+
+    def test_no_urlscan_key_adds_error_message(self):
+        enricher = ThreatIntelEnricher({})
+        result = enricher.enrich("http://example.com")
+        assert any("URLScan" in e for e in result["enrichment_errors"])
+
+    def test_vt_malicious_count_parsed(self):
+        fake_body = _json.dumps({"data": {"attributes": {"last_analysis_stats": {"malicious": 4,
+                                                                                 "suspicious": 1,
+                                                                                 "harmless": 55,
+                                                                                 "undetected": 5}}}
+                                    }).encode()
+        with patch("src.threat_intel._urlopen_with_retry", return_value=fake_body):
+            enricher = ThreatIntelEnricher({"virustotal_api_key": "fake"})
+            result = enricher.enrich("http://evil.com")
+        assert result["vt_malicious"] == 4
+        assert result["vt_checked"] is True
+
+    def test_vt_http_error_returns_enrichment_error(self):
+        with patch("src.threat_intel._urlopen_with_retry",
+                    side_effect=urllib.error.HTTPError(None, 403, "Forbidden", {}, None)):
+            enricher = ThreatIntelEnricher({"virustotal_api_key": "fake"})
+            result = enricher.enrich("http://example.com")
+        assert any("VirusTotal" in e for e in result.get("enrichment_errors", []))
+
+
+# ReportGenerator Tests
+class TestReportGenerator:
+    def test_export_json_valid_list(self, tmp_path, monkeypatch, sample_result):
+        monkeypatch.chdir(tmp_path)
+        os.makedirs("reports", exist_ok=True)
+        rg = ReportGenerator()
+        path = rg.export([sample_result])
+        with open(path) as f:
+            data = _json.load(f)
+        assert isinstance(data, list)
+        assert data[0]["url"] == "http://test.com"
+
+    def test_export_csv_correct_headers(self, tmp_path, monkeypatch, sample_result):
+        monkeypatch.chdir(tmp_path)
+        os.makedirs("reports", exist_ok=True)
+        rg = ReportGenerator()
+        path = rg.export_csv([sample_result])
+        with open(path) as f:
+            headers = _csv.DictReader(f).fieldnames
+        assert "verdict" in headers
+        assert "confidence" in headers
+        assert "score" in headers
+        assert "mitre_tags" in headers
+
+    def test_export_csv_confidence_value(self, tmp_path, monkeypatch, sample_result):
+        monkeypatch.chdir(tmp_path)
+        os.makedirs("reports", exist_ok=True)
+        rg = ReportGenerator()
+        path = rg.export_csv([sample_result])
+        with open(path) as f:
+            row = next(_csv.DictReader(f))
+        assert row["confidence"] == "VERY_LOW"
+        assert row["verdict"] == "BENIGN"
+        assert row["mitre_tags"] == ""
+
+    def test_export_csv_mitre_tags_pipe_separated(self, tmp_path, monkeypatch, sample_result):
+        monkeypatch.chdir(tmp_path)
+        os.makedirs("reports", exist_ok=True)
+        result = {**sample_result, "mitre": ["T1566.002 - Spearphishing Link",
+                                              "T1027 - Obfuscated Files or Information"]}
+        rg = ReportGenerator()
+        path = rg.export_csv([result])
+        with open(path) as f:
+            row = next(_csv.DictReader(f))
+        assert "|" in row["mitre_tags"]
+        assert "T1566.002" in row["mitre_tags"]
+
+
+# mitre_mapper - cover missing branches (T1659, T1583.006)
+class TestMapToMitreMissingBranches:
+    def test_t1659_fires_on_domain_switches(self):
+        tags = map_to_mitre({"brand_impersonation": False,
+                                     "typosquatting": False,
+                                     "brand_in_subdomain": False,
+                                     "hex_encoding": False,
+                                     "uses_ip_as_host": False,
+                                     "cloud_hosting_abuse": False,
+                                     "malware_extension": False,
+                                     "malware_path_keyword": False},
+                               {"vt_malicious": 0,
+                                     "urlscan_malicious": False},
+                         {"hop_count": 0, "domain_switches": [{"hop": 1}]} )
+        assert "T1659 - Content Injection / Redirect" in tags
+
+    def test_t1583_006_fires_on_cloud_abuse(self):
+        tags = map_to_mitre({"brand_impersonation": False,
+                                     "typosquatting": False,
+                                     "brand_in_subdomain": False,
+                                     "hex_encoding": False,
+                                     "uses_ip_as_host": False,
+                                     "cloud_hosting_abuse": True,
+                                     "malware_extension": False,
+                                     "malware_path_keyword": False},
+                               {"vt_malicious": 0,
+                                     "urlscan_malicious": False},
+                         {"hop_count": 0,
+                                     "domain_switches": []} )
+        assert "T1583.006 - Web Services / Cloud Storage" in tags
