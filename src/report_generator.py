@@ -33,7 +33,7 @@ class ReportGenerator:
 
         fieldnames = ["url", "verdict", "score", "confidence", "final_url", "redirect_hops", "brand_impersonation",
                       "typosquatting", "cloud_hosting_abuse", "private_ip", "uses_ip_as_host", "suspicious_tld",
-                      "domain_age_days", "vt_malicious", "urlscan_malicious", "mitre_tags" ]
+                      "domain_age_days", "vt_malicious", "urlscan_malicious", "mitre_tags"]
 
         with open(filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f,
@@ -42,8 +42,8 @@ class ReportGenerator:
             writer.writeheader()
             for r in results:
                 features = r.get("features", {})
-                intel    = r.get("threat_intel", {})
-                risk     = r.get("risk", {})
+                intel = r.get("threat_intel", {})
+                risk = r.get("risk", {})
                 writer.writerow({"url":                 r.get("url", ""),
                                  "verdict":             risk.get("verdict", ""),
                                  "score":               risk.get("score", 0),
@@ -59,6 +59,6 @@ class ReportGenerator:
                                  "domain_age_days":     intel.get("domain_age_days", ""),
                                  "vt_malicious":        intel.get("vt_malicious", 0),
                                  "urlscan_malicious":   intel.get("urlscan_malicious", False),
-                                 "mitre_tags":          "|".join(r.get("mitre", []))    })
+                                 "mitre_tags":          "|".join(r.get("mitre", []))})
 
         return str(filename)

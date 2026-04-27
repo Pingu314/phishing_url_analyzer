@@ -191,7 +191,6 @@ class TestURLFeatureExtractor:
         assert f["uses_https"] is False
 
 
-
 # Risk Scorer Tests
 class TestRiskScorer:
 

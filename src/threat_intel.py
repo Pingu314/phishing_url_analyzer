@@ -41,6 +41,7 @@ def _urlopen_with_retry(req: urllib.request.Request, max_retries: int = 3, timeo
             raise
     raise last_exc
 
+
 class ThreatIntelEnricher:
     def __init__(self, config: dict):
         self.vt_api_key = config.get("virustotal_api_key", "")
@@ -148,7 +149,7 @@ class ThreatIntelEnricher:
             result_url = f"https://urlscan.io/api/v1/result/{scan_uuid}/"
             req2 = urllib.request.Request(result_url,
                                           headers={"API-Key": self.urlscan_api_key})
-            for attempt in range(10):
+            for _attempt in range(10):
                 time.sleep(3)
                 try:
                     with urllib.request.urlopen(req2, timeout=10) as response:
@@ -163,7 +164,7 @@ class ThreatIntelEnricher:
                         continue   # Not ready yet - keep polling
                     raise
 
-            return {"enrichment_errors": [f"URLScan: result not ready after polling"]}
+            return {"enrichment_errors": ["URLScan: result not ready after polling"]}
 
         except Exception as e:
             return {"enrichment_errors": [f"URLScan error: {str(e)}"]}

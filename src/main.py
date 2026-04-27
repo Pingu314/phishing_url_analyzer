@@ -99,6 +99,7 @@ def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
 
     return result
 
+
 def load_config(config_path: str = "config/config.json") -> dict:
     path = Path(config_path)
     if path.exists():
@@ -153,8 +154,7 @@ Examples:
     if args.file:
         try:
             with open(args.file) as f:
-                urls.extend([line.strip() for line in f
-                              if line.strip() and not line.startswith("#")])
+                urls.extend([line.strip() for line in f if line.strip() and not line.startswith("#")])
         except FileNotFoundError:
             print(f"[!] Error: URL file not found: {args.file}")
             sys.exit(1)

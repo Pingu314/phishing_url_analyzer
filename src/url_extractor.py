@@ -46,7 +46,7 @@ class URLFeatureExtractor:
         path = self.parsed.path.lower()
         full = url_lower
 
-        features = {# Basic structure
+        features = {  # Basic structure
                     "url": self.raw_url,
                     "scheme": self.parsed.scheme,
                     "domain": domain,
@@ -107,9 +107,9 @@ class URLFeatureExtractor:
 
         return features
 
-
     # Subdomain / domain helpers
     def _count_subdomains(self, domain: str) -> int:
+
         """Return number of subdomain labels, skipping IP addresses."""
         if self._is_ip(domain):
             return 0
@@ -120,6 +120,7 @@ class URLFeatureExtractor:
         return bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}(:\d+)?$", domain))
 
     def _is_private_ip(self, domain: str) -> bool:
+
         """Return True if the host is an RFC 1918 / loopback / link-local IP.
 
         Covers:
@@ -137,6 +138,7 @@ class URLFeatureExtractor:
             return False
 
     def _is_cloud_hosted(self, domain: str) -> bool:
+
         """True when domain matches a known cloud storage/hosting suffix
 
         Uses suffix matching against CLOUD_HOSTING_DOMAINS (full domain strings),
@@ -150,6 +152,7 @@ class URLFeatureExtractor:
         return any(host == suffix or host.endswith("." + suffix) for suffix in CLOUD_HOSTING_DOMAINS)
 
     def _registered_label(self, domain: str) -> str:
+
         """Return the second-level label (e.g. 'google' from 'www.google.com').
         Falls back sensibly for IPs or bare hostnames."""
         if self._is_ip(domain):
@@ -159,9 +162,9 @@ class URLFeatureExtractor:
             return parts[-2]   # e.g. 'google', 'paypal', 'phishing-site'
         return parts[0] if parts else domain
 
-
     # Entropy
     def _shannon_entropy(self, s: str) -> float:
+
         """Shannon entropy of string s (bits per character)
         Uses Counter for O(n) performance instead of repeated .count() scans
         """
@@ -172,6 +175,7 @@ class URLFeatureExtractor:
         return round(-sum((c / n) * math.log2(c / n) for c in freq.values()), 3)
 
     def _max_path_segment_entropy(self, path: str) -> float:
+
         """Return the highest Shannon entropy among all non-empty path segments.
 
         Ignores segments shorter than 6 characters to avoid noise from short
@@ -182,7 +186,6 @@ class URLFeatureExtractor:
         if not segments:
             return 0.0
         return max(self._shannon_entropy(s) for s in segments)
-
 
     # Keyword / brand matching helpers
     def _has_any(self, text: str, keywords: list) -> bool:
@@ -221,13 +224,13 @@ class URLFeatureExtractor:
                         found.append(b)
         return found
 
-
     # TLD / brand detection
     def _get_tld(self, domain: str) -> str:
         parts = domain.split(".")
         return "." + parts[-1] if len(parts) >= 2 else ""
 
     def _detect_brand_impersonation(self, domain: str) -> bool:
+
         """Detect if a brand appears in the domain but the domain is not
         the legitimate brand domain.
 

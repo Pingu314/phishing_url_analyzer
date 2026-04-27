@@ -45,8 +45,7 @@ CLOUD_HOSTING_DOMAINS = ["storage.googleapis.com",       # GCS public buckets
                          "netlify.app",                  # Netlify
                          "github.io",                    # GitHub Pages
                          "web.app",                      # Firebase Hosting
-                         "firebaseapp.com",              # Firebase Hosting (legacy)
-                        ]
+                         "firebaseapp.com", ]            # Firebase Hosting (legacy)
 
 # TLD lists
 SUSPICIOUS_TLDS = [".xyz", ".tk", ".ml", ".ga", ".cf", ".gq", ".top", ".club", ".click", ".link", ".live", ".online",
@@ -57,11 +56,11 @@ LEGITIMATE_TLDS = [".com", ".org", ".gov", ".edu", ".co.uk", ".de", ".ch", ".fr"
 
 # Redirect follower
 MAX_HOPS = 6
-REQUEST_TIMEOUT = 6   # seconds per hop
+REQUEST_TIMEOUT = 6     # seconds per hop
 
 
 # Risk scorer weights  (0-100 scale, capped at 100)
-WEIGHTS = {# High-signal
+WEIGHTS = {  # High-signal
            "vt_malicious":           20,   # per engine (capped at 40 total)
            "urlscan_malicious":      20,
            "brand_impersonation":    18,
