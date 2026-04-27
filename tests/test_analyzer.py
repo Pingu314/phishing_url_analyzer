@@ -467,8 +467,7 @@ class TestThreatIntelEnricher:
         fake_body = _json.dumps({"data": {"attributes": {"last_analysis_stats": {"malicious": 4,
                                                                                  "suspicious": 1,
                                                                                  "harmless": 55,
-                                                                                 "undetected": 5}}}
-                                    }).encode()
+                                                                                 "undetected": 5}}}}).encode()
         with patch("src.threat_intel._urlopen_with_retry", return_value=fake_body):
             enricher = ThreatIntelEnricher({"virustotal_api_key": "fake"})
             result = enricher.enrich("http://evil.com")
@@ -544,7 +543,7 @@ class TestMapToMitreMissingBranches:
                                      "malware_path_keyword": False},
                                {"vt_malicious": 0,
                                      "urlscan_malicious": False},
-                         {"hop_count": 0, "domain_switches": [{"hop": 1}]} )
+                         {"hop_count": 0, "domain_switches": [{"hop": 1}]})
         assert "T1659 - Content Injection / Redirect" in tags
 
     def test_t1583_006_fires_on_cloud_abuse(self):
@@ -559,5 +558,5 @@ class TestMapToMitreMissingBranches:
                                {"vt_malicious": 0,
                                      "urlscan_malicious": False},
                          {"hop_count": 0,
-                                     "domain_switches": []} )
+                                     "domain_switches": []})
         assert "T1583.006 - Web Services / Cloud Storage" in tags
