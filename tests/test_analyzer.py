@@ -252,12 +252,12 @@ class TestRiskScorer:
         assert risk["score"] >= 18
 
     def test_malware_extension_adds_points(self, scorer, clean_features, clean_intel):
-        features = {**clean_features, "path": "/download/payload.exe"}
+        features = {**clean_features, "malware_extension": True}
         risk = scorer.score(features, clean_intel)
         assert risk["score"] >= 15
 
     def test_malware_path_keyword_adds_points(self, scorer, clean_features, clean_intel):
-        features = {**clean_features, "path": "/payload/stage1"}
+        features = {**clean_features, "malware_path_keyword": True}
         risk = scorer.score(features, clean_intel)
         assert risk["score"] >= 8
 
@@ -350,11 +350,11 @@ class TestRedirectFollower:
         assert result["chain"] == []
 
     def test_follow_returns_required_keys(self):
-        """Result dict must always contain all expected keys."""
+        """Result dict must always contain all expected keys"""
         rf = RedirectFollower()
         result = rf.follow("https://www.google.com")
-        for key in ["initial_url", "final_url", "hop_count", "chain",
-                    "domain_switches", "domain_changed", "errors", "suspicious"]:
+        for key in ["initial_url", "final_url", "hop_count", "chain", "domain_switches",
+                    "domain_changed", "initial_domain", "final_domain", "errors"]:
             assert key in result, f"Missing key: {key}"
 
 
