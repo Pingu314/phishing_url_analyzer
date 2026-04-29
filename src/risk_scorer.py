@@ -6,7 +6,7 @@ Verdict tiers: BENIGN / SUSPICIOUS / MALICIOUS
 Scoring is intentionally rule-based and transparent
 """
 
-from config.settings import WEIGHTS, THRESHOLDS, MALWARE_EXTENSIONS, MALWARE_PATH_KEYWORDS
+from config.settings import WEIGHTS, THRESHOLDS
 
 
 class RiskScorer:
@@ -85,12 +85,11 @@ class RiskScorer:
         if features.get("double_slash"):
             add("double_slash", WEIGHTS["double_slash"])
 
-        # Malware delivery signals (path-based)
-        path_lower = features.get("path", "").lower()
-        if any(ext in path_lower for ext in MALWARE_EXTENSIONS):
+        # Malware delivery signals - use pre-computed flags from URLFeatureExtractor
+        if features.get("malware_extension"):
             add("malware_extension", WEIGHTS["malware_extension"])
 
-        if any(kw in path_lower for kw in MALWARE_PATH_KEYWORDS):
+        if features.get("malware_path_keyword"):
             add("malware_path_keyword", WEIGHTS["malware_path_keyword"])
 
         # Soft / statistical signals
