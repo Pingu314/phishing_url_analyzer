@@ -15,7 +15,7 @@ https://clicks.thechosen.tv/f/a/04Zppb1WlQ7ru5Dx8ifaCg~~/AAQRxRA~/PrvR4NhaiL4r2Z
 http://paypal-secure-verify.com/login
 https://microsoft-account-update.xyz/verify?user=admin
 
-# Private IP (RFC 1918) — 192.168.x.x
+# Private IP (RFC 1918) - 192.168.x.x
 http://192.168.1.105/bank/login.php
 
 # Private IP — 10.x.x.x
