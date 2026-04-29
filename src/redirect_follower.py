@@ -1,7 +1,7 @@
 """
 Redirect Follower
-Follows HTTP redirect chains up to MAX_HOPS hops.
-Detects mid-chain domain switches (potential cloaking / open-redirect abuse).
+Follows HTTP redirect chains up to MAX_HOPS hops
+Detects mid-chain domain switches (potential cloaking / open-redirect abuse)
 
 MITRE ATT&CK: T1027 (Obfuscated Files or Information)
 """
@@ -20,12 +20,12 @@ class RedirectFollower:
 
     def follow(self, url: str) -> dict:
         """
-        Follow redirects from `url` up to MAX_HOPS times.
-        Returns a dict with the full chain, domain switch events, and
-        the final resolved URL.
+        Follow redirects from `url` up to MAX_HOPS times
+        Returns a dict with the full chain, domain switch events and
+        the final resolved URL
 
-        hop_count reflects the number of *redirect hops* (0 = no redirects).
-        The initial request is NOT counted as a hop.
+        hop_count reflects the number of *redirect hops* (0 = no redirects)
+        The initial request is NOT counted as a hop
         """
         chain = []
         domain_switches = []
@@ -54,14 +54,12 @@ class RedirectFollower:
             chain.append({"hop": len(chain) + 1,
                           "from_url": current_url,
                           "to_url": next_url,
-                          "domain": next_domain,
                           "status_code": result.get("status_code")})
 
-            # Detect domain switch on this hop
             if next_domain != prev_domain:
-                domain_switches.append({"hop": len(chain),
-                                        "from": prev_domain,
-                                        "to": next_domain})
+                domain_switches.append({"from_domain": prev_domain,
+                                        "to_domain": next_domain,
+                                        "at_hop": len(chain)})
 
             prev_domain = next_domain
             current_url = next_url
@@ -70,32 +68,28 @@ class RedirectFollower:
         final_domain = self._extract_domain(final_url)
         initial_domain = self._extract_domain(url)
 
-        return {"initial_url": url,
-                "final_url": final_url,
-                "hop_count": len(chain),          # 0 = no redirects
-                "chain": chain,
+        return {"initial_url":     url,
+                "final_url":       final_url,
+                "hop_count":       len(chain),        # 0 = no redirects
+                "chain":           chain,
                 "domain_switches": domain_switches,
-                "domain_changed": initial_domain != final_domain,
-                "initial_domain": initial_domain,
-                "final_domain": final_domain,
-                "errors": errors,
-                # Convenience flag for downstream scoring
-                "suspicious": len(domain_switches) > 0 or len(chain) > 3}
+                "domain_changed":  initial_domain != final_domain,
+                "initial_domain":  initial_domain,
+                "final_domain":    final_domain,
+                "errors":          errors}
 
     def _fetch_single(self, url: str) -> dict:
         """
-        Fetch one URL without auto-following redirects.
-        Returns status_code + location header (if redirect) or error.
+        Fetch one URL without auto-following redirects
+        Returns status_code + location header (if redirect) or error
         """
         try:
-            # Build a custom opener that does NOT follow redirects
             class NoRedirect(urllib.request.HTTPRedirectHandler):
                 def redirect_request(self, req, fp, code, msg, headers, newurl):
                     return None  # Block auto-follow
 
             opener = urllib.request.build_opener(NoRedirect)
-            req = urllib.request.Request(url,
-                                         headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 
             try:
                 with opener.open(req, timeout=REQUEST_TIMEOUT) as response:
@@ -108,14 +102,11 @@ class RedirectFollower:
 
         except urllib.error.URLError as e:
             return {"error": f"URLError: {str(e.reason)}"}
-        except socket.timeout:
-            return {"error": "Timeout"}
-        except Exception as e:
-            return {"error": str(e)}
+        except (socket.timeout, OSError) as e:
+            return {"error": f"Connection error: {str(e)}"}
 
     def _extract_domain(self, url: str) -> str:
         try:
-            parsed = urllib.parse.urlparse(url)
-            return parsed.netloc.lower()
+            return urllib.parse.urlparse(url).netloc.lower()
         except Exception:
-            return url
+            return ""
