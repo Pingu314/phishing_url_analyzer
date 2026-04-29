@@ -175,7 +175,7 @@ analyst learning path (CompTIA Security+, TryHackMe SOC Level 1).
 
 - Do **not** use this tool to analyze URLs you do not have permission to test
 - Threat intelligence lookups (VirusTotal, URLScan.io) submit URLs to
-  third-party services — do not analyze sensitive or internal URLs with API keys configured
+  third-party services - do not analyze sensitive or internal URLs with API keys configured
 - URLScan.io scans are submitted with `visibility: private`, but result links
   are only accessible to the submitting account
 - Results are heuristic and rule-based - false positives and false negatives are expected
