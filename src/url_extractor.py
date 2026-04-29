@@ -28,10 +28,8 @@ class URLFeatureExtractor:
         except Exception:
             return None
 
-    def _safe_port(self) -> bool:
-        """Return True if a non-standard port is present in the URL.
-        urllib.parse.port raises ValueError for malformed values (e.g. a space),
-        so we guard against that here."""
+    def _has_nonstandard_port(self) -> bool:
+        """Return True if a non-standard port is present in the URL"""
         try:
             return bool(self.parsed.port)
         except ValueError:
@@ -72,7 +70,7 @@ class URLFeatureExtractor:
                     "ip_in_url": bool(re.search(r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", full)),
                     "uses_ip_as_host": bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}", domain)),
                     "private_ip": self._is_private_ip(domain),
-                    "port_in_url": self._safe_port(),
+                    "port_in_url": self._has_nonstandard_port(),
 
                     # Protocol
                     "uses_https": self.parsed.scheme == "https",
@@ -117,6 +115,9 @@ class URLFeatureExtractor:
         return max(0, len(parts) - 2)
 
     def _is_ip(self, domain: str) -> bool:
+        """Return True if domain looks like an IPv4 address (with optional port)
+        Note: does not validate octet ranges - callers that need strict validation
+        (e.g. _is_private_ip) use ipaddress.ip_address() for that"""
         return bool(re.match(r"^\d{1,3}(\.\d{1,3}){3}(:\d+)?$", domain))
 
     def _is_private_ip(self, domain: str) -> bool:
