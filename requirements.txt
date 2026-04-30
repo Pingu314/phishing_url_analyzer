@@ -1,11 +1,6 @@
-# Phishing URL Analyzer - runtime & dev dependencies
-# Runtime (canonical pins in pyproject.toml -> [project.dependencies])
-python-whois>=0.9
-
-# Dev / test
-pytest>=8
-pytest-cov>=4.1
-
-# Lint
-flake8>=7.0
-flake8-bugbear>=24.0
+# Install all dependencies via pyproject.toml instead:
+  #   pip install -e ".[dev]"    # runtime + tests
+  #   pip install -e ".[lint]"   # linting
+  #
+  # This file is kept only for compatibility with tooling that expects it
+  -e .[dev]
