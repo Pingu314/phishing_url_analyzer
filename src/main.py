@@ -7,12 +7,12 @@ import json
 import sys
 from pathlib import Path
 
-from url_extractor import URLFeatureExtractor
-from threat_intel import ThreatIntelEnricher
-from risk_scorer import RiskScorer
-from report_generator import ReportGenerator
-from redirect_follower import RedirectFollower
-from mitre_mapper import map_to_mitre
+from src.url_extractor import URLFeatureExtractor
+from src.threat_intel import ThreatIntelEnricher
+from src.risk_scorer import RiskScorer
+from src.report_generator import ReportGenerator
+from src.redirect_follower import RedirectFollower
+from src.mitre_mapper import map_to_mitre
 
 
 def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
