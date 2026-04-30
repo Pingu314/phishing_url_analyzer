@@ -3,6 +3,7 @@ Phishing URL Analyzer - Main Entry Point
 SOC Portfolio Project | MITRE ATT&CK: T1566 (Phishing)
 """
 import argparse
+import logging
 import json
 import sys
 from pathlib import Path
@@ -13,6 +14,8 @@ from src.risk_scorer import RiskScorer
 from src.report_generator import ReportGenerator
 from src.redirect_follower import RedirectFollower
 from src.mitre_mapper import map_to_mitre
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
@@ -107,9 +110,9 @@ def load_config(config_path: str = "config/config.json") -> dict:
             with open(path) as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError) as e:
-            print(f"[!] Warning: could not read config file ({e}) — running without API keys")
+            logger.warning("Could not read config file (%s) - running without API keys", e)
     else:
-        print(f"[!] No config file found at {config_path} — running without threat intelligence")
+        logger.warning("No config file found at %s - running without threat intelligence", config_path)
     return {}
 
 
