@@ -6,7 +6,9 @@ Verdict tiers: BENIGN / SUSPICIOUS / MALICIOUS
 Scoring is intentionally rule-based and transparent
 """
 
-from config.settings import WEIGHTS, THRESHOLDS
+from config.settings import (WEIGHTS, THRESHOLDS, DOMAIN_ENTROPY_THRESHOLD, PATH_ENTROPY_THRESHOLD,
+                             URL_LENGTH_THRESHOLD, REDIRECT_HOP_THRESHOLD, HYPHEN_COUNT_THRESHOLD,
+                             PATH_DEPTH_THRESHOLD, SUBDOMAIN_COUNT_THRESHOLD, VT_MAX_SCORE)
 
 
 class RiskScorer:
@@ -36,7 +38,7 @@ class RiskScorer:
         # Threat intel signals
         vt_mal = intel.get("vt_malicious", 0)
         if vt_mal > 0:
-            pts = min(vt_mal * WEIGHTS["vt_malicious"], 40)
+            pts = min(vt_mal * WEIGHTS["vt_malicious"], VT_MAX_SCORE)
             add("vt_malicious_engines", pts)
 
         if intel.get("urlscan_malicious"):
@@ -93,30 +95,30 @@ class RiskScorer:
             add("malware_path_keyword", WEIGHTS["malware_path_keyword"])
 
         # Soft / statistical signals
-        if features.get("domain_entropy", 0) > 3.8:
+        if features.get("domain_entropy", 0) > DOMAIN_ENTROPY_THRESHOLD:
             add("high_entropy", WEIGHTS["high_entropy"])
 
-        if features.get("path_entropy", 0) > 3.5:
+        if features.get("path_entropy", 0) > PATH_ENTROPY_THRESHOLD:
             add("high_path_entropy", WEIGHTS["high_path_entropy"])
 
-        if features.get("url_length", 0) > 75:
+        if features.get("url_length", 0) > URL_LENGTH_THRESHOLD:
             add("long_url", WEIGHTS["long_url"])
 
         # redirect_count == number of actual hops (0 means no redirects)
-        if features.get("redirect_count", 0) > 1:
+        if features.get("redirect_count", 0) > REDIRECT_HOP_THRESHOLD:
             add("many_hops", WEIGHTS["many_hops"])
 
         age = intel.get("domain_age_days")
         if age is not None and age < 30:
             add("new_domain", WEIGHTS["new_domain"])
 
-        if features.get("hyphen_count", 0) > 3:
+        if features.get("hyphen_count", 0) > HYPHEN_COUNT_THRESHOLD:
             add("many_hyphens", WEIGHTS["many_hyphens"])
 
-        if features.get("path_depth", 0) > 4:
+        if features.get("path_depth", 0) > PATH_DEPTH_THRESHOLD:
             add("deep_path", WEIGHTS["deep_path"])
 
-        if features.get("subdomain_count", 0) > 2:
+        if features.get("subdomain_count", 0) > SUBDOMAIN_COUNT_THRESHOLD:
             add("many_subdomains", WEIGHTS["many_subdomains"])
 
         if features.get("port_in_url"):

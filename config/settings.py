@@ -70,6 +70,18 @@ LEGITIMATE_TLDS = [".com", ".org", ".gov", ".edu", ".co.uk", ".de", ".ch", ".fr"
 MAX_HOPS = 6
 REQUEST_TIMEOUT = 6     # seconds per hop
 
+# Soft-signal thresholds
+DOMAIN_ENTROPY_THRESHOLD = 3.8
+PATH_ENTROPY_THRESHOLD = 3.5
+URL_LENGTH_THRESHOLD = 75
+REDIRECT_HOP_THRESHOLD = 1
+HYPHEN_COUNT_THRESHOLD = 3
+PATH_DEPTH_THRESHOLD = 4
+SUBDOMAIN_COUNT_THRESHOLD = 2
+
+# VT
+VT_MAX_SCORE = 40
+
 # Risk scorer weights  (0–100 scale, capped at 100)
 WEIGHTS = {
     # High-signal
