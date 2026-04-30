@@ -18,8 +18,17 @@ from src.mitre_mapper import map_to_mitre
 logger = logging.getLogger(__name__)
 
 
-def analyze_url(url: str, config: dict, verbose: bool = False) -> dict:
-    """Full analysis pipeline for a single URL."""
+def analyze_url(url: str,
+                config: dict,
+                verbose: bool = False,
+                enricher=None,
+                scorer=None) -> dict:
+    if enricher is None:
+        enricher = ThreatIntelEnricher(config)
+    if scorer is None:
+        scorer = RiskScorer()
+
+        """Full analysis pipeline for a single URL."""
     print(f"\n[*] Analyzing: {url}")
 
     # Stage 1: Redirect chain following
@@ -177,8 +186,16 @@ Examples:
     urls = unique_urls
 
     results = []
+    enricher = ThreatIntelEnricher(config)
+    scorer = RiskScorer()
+    reporter = ReportGenerator()
+
     for url in urls:
-        result = analyze_url(url, config, verbose=args.verbose)
+        result = analyze_url(url,
+                             config,
+                             verbose=args.verbose,
+                             enricher=enricher,
+                             scorer=scorer)
         results.append(result)
 
     if args.export or args.file or args.csv:
