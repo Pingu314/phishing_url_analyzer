@@ -45,9 +45,3 @@ omit = ["tests/*", "src/main.py"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 60
-
-[tool.flake8]
-max-line-length = 100
-extend-ignore = ["E127", "E128", "E203", "E501", "W292", "W503"]
-exclude = [".git", "__pycache__", "venv", ".venv", "build", "dist", ".eggs"]
-per-file-ignores = ["tests/*:S101"]
