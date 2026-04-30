@@ -134,7 +134,7 @@ Examples:
                         help="Show detailed output")
     parser.add_argument("--export",
                         action="store_true",
-                        help="Export JSON report to /reports")
+                        help="Export JSON report to reports/")
     parser.add_argument("--csv",
                         action="store_true",
                         help="Also export a CSV summary to reports/")
