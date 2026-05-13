@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phishing-url-analyzer"
-version = "1.0.0"
+version = "1.1.0"
 description = "SOC triage tool for phishing URL detection with MITRE ATT&CK mapping"
 readme = "README.md"
 license = { text = "MIT" }
