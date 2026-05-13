@@ -1,6 +1,0 @@
-# Install all dependencies via pyproject.toml instead:
-  #   pip install -e ".[dev]"    # runtime + tests
-  #   pip install -e ".[lint]"   # linting
-  #
-  # This file is kept only for compatibility with tooling that expects it
-  -e .[dev]

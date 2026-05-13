@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 keywords = ["security", "phishing", "soc", "threat-intelligence", "mitre-attack"]
-classifiers = ["Development Status :: 4 - Beta",
+classifiers = ["Development Status :: 5 - Production/Stable",
                "Intended Audience :: Information Technology",
                "Topic :: Security",
                "Programming Language :: Python :: 3",
@@ -18,6 +18,7 @@ classifiers = ["Development Status :: 4 - Beta",
                "Programming Language :: Python :: 3.10",
                "Programming Language :: Python :: 3.11",
                "Programming Language :: Python :: 3.12",
+               "Programming Language :: Python :: 3.13",
                "License :: OSI Approved :: MIT License"]
 dependencies = ["python-whois>=0.9"]
 
@@ -36,12 +37,13 @@ include = ["src*", "config*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+pythonpath = ["."]
+addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80"
 
 [tool.coverage.run]
-source = ["src"]
+source = ["src", "config"]
 omit = ["tests/*", "src/main.py"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 60
+fail_under = 80
