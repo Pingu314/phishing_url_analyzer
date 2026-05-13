@@ -4,7 +4,8 @@ env/
 dist/
 .pytest_cache/
 __pycache__/
-reports/*
+reports/
+!reports/.gitkeep
 *.egg-info/
 .DS_Store
 .idea/
