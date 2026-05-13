@@ -2,6 +2,8 @@
 Phishing URL Analyzer - Main Entry Point
 SOC Portfolio Project | MITRE ATT&CK: T1566 (Phishing)
 """
+from __future__ import annotations
+
 import argparse
 import logging
 import json
@@ -18,24 +20,38 @@ from src.mitre_mapper import map_to_mitre
 logger = logging.getLogger(__name__)
 
 
-def analyze_url(url: str,
-                config: dict,
-                verbose: bool = False,
-                enricher=None,
-                scorer=None) -> dict:
+def analyze_url(
+    url: str,
+    config: dict,
+    verbose: bool = False,
+    enricher: ThreatIntelEnricher | None = None,
+    scorer: RiskScorer | None = None,
+) -> dict:
+    """Full analysis pipeline for a single URL.
+
+    Args:
+        url:     The URL to analyze (original, pre-redirect).
+        config:  Config dict from load_config() - may contain API keys.
+        verbose: If True, print full feature and intel dicts to stdout.
+        enricher: Optional pre-instantiated ThreatIntelEnricher (reused across batch runs).
+        scorer:  Optional pre-instantiated RiskScorer (reused across batch runs).
+
+    Returns:
+        Result dict with keys: url, final_url, redirect_chain, features,
+        threat_intel, risk, mitre.
+    """
     if enricher is None:
         enricher = ThreatIntelEnricher(config)
     if scorer is None:
         scorer = RiskScorer()
 
-        """Full analysis pipeline for a single URL."""
     print(f"\n[*] Analyzing: {url}")
 
     # Stage 1: Redirect chain following
     print("[*] Following redirect chain...")
     follower = RedirectFollower()
     redirect_data = follower.follow(url)
-    hop_count = redirect_data["hop_count"]       # 0 = no redirects
+    hop_count = redirect_data["hop_count"]
     domain_switches = len(redirect_data["domain_switches"])
 
     if hop_count > 0:
@@ -73,7 +89,6 @@ def analyze_url(url: str,
     # Stage 3: Threat intelligence enrichment
     # TI runs on the final URL (the actual destination) for more accurate results.
     print("[*] Enriching with threat intelligence...")
-    enricher = ThreatIntelEnricher(config)
     intel = enricher.enrich(final_url)
 
     if verbose:
@@ -81,7 +96,6 @@ def analyze_url(url: str,
 
     # Stage 4: Risk scoring
     print("[*] Calculating risk score...")
-    scorer = RiskScorer()
     risk = scorer.score(features, intel)
 
     # Stage 5: MITRE ATT&CK mapping
@@ -95,7 +109,7 @@ def analyze_url(url: str,
               "risk": risk,
               "mitre": mitre_tags}
 
-    verdict_color = {"BENIGN":    "\033[92m",
+    verdict_color = {"BENIGN":     "\033[92m",
                      "SUSPICIOUS": "\033[93m",
                      "MALICIOUS":  "\033[91m"}
     reset = "\033[0m"
@@ -113,6 +127,14 @@ def analyze_url(url: str,
 
 
 def load_config(config_path: str = "config/config.json") -> dict:
+    """Load API key config from a JSON file.
+
+    Args:
+        config_path: Path to config JSON file.
+
+    Returns:
+        Config dict, or empty dict if file is missing or unreadable.
+    """
     path = Path(config_path)
     if path.exists():
         try:
@@ -121,34 +143,31 @@ def load_config(config_path: str = "config/config.json") -> dict:
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("Could not read config file (%s) - running without API keys", e)
     else:
-        logger.warning("No config file found at %s - running without threat intelligence", config_path)
+        logger.warning("No config file found at %s - running without threat intelligence",
+                       config_path)
     return {}
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Phishing URL Analyzer - SOC Triage Tool",
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     epilog="""
+def main() -> None:
+    """CLI entrypoint for phishing-analyze."""
+    parser = argparse.ArgumentParser(
+        description="Phishing URL Analyzer - SOC Triage Tool",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
 Examples:
-  python main.py -u "http://suspicious-site.com/login"
-  python main.py -f data/sample_urls/urls.txt
-  python main.py -u "http://paypa1.com/verify" --verbose --export
+  phishing-analyze -u "http://suspicious-site.com/login"
+  phishing-analyze -f data/sample_urls/urls.txt
+  phishing-analyze -u "http://paypa1.com/verify" --verbose --export
 """)
-    parser.add_argument("-u", "--url",
-                        help="Single URL to analyze")
-    parser.add_argument("-f", "--file",
-                        help="File with URLs (one per line)")
-    parser.add_argument("-v", "--verbose",
-                        action="store_true",
+    parser.add_argument("-u", "--url", help="Single URL to analyze")
+    parser.add_argument("-f", "--file", help="File with URLs (one per line)")
+    parser.add_argument("-v", "--verbose", action="store_true",
                         help="Show detailed output")
-    parser.add_argument("--export",
-                        action="store_true",
+    parser.add_argument("--export", action="store_true",
                         help="Export JSON report to reports/")
-    parser.add_argument("--csv",
-                        action="store_true",
+    parser.add_argument("--csv", action="store_true",
                         help="Also export a CSV summary to reports/")
-    parser.add_argument("--config",
-                        default="config/config.json",
+    parser.add_argument("--config", default="config/config.json",
                         help="Path to config file")
 
     args = parser.parse_args()
@@ -158,7 +177,7 @@ Examples:
         sys.exit(1)
 
     config = load_config(args.config)
-    urls = []
+    urls: list[str] = []
 
     if args.url:
         urls.append(args.url)
@@ -166,7 +185,10 @@ Examples:
     if args.file:
         try:
             with open(args.file) as f:
-                urls.extend([line.strip() for line in f if line.strip() and not line.startswith("#")])
+                urls.extend(
+                    [line.strip() for line in f
+                     if line.strip() and not line.startswith("#")]
+                )
         except FileNotFoundError:
             print(f"[!] Error: URL file not found: {args.file}")
             sys.exit(1)
@@ -175,8 +197,8 @@ Examples:
             sys.exit(1)
 
     # Deduplicate while preserving order
-    seen = set()
-    unique_urls = []
+    seen: set[str] = set()
+    unique_urls: list[str] = []
     for u in urls:
         if u not in seen:
             seen.add(u)
@@ -185,7 +207,7 @@ Examples:
         print(f"[*] Removed {len(urls) - len(unique_urls)} duplicate URL(s)")
     urls = unique_urls
 
-    results = []
+    results: list[dict] = []
     enricher = ThreatIntelEnricher(config)
     scorer = RiskScorer()
     reporter = ReportGenerator()
@@ -199,7 +221,6 @@ Examples:
         results.append(result)
 
     if args.export or args.file or args.csv:
-        reporter = ReportGenerator()
         if args.export or args.file:
             try:
                 report_path = reporter.export(results)
