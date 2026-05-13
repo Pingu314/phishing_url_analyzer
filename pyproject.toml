@@ -38,12 +38,12 @@ include = ["src*", "config*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=80"
+addopts = "-v --tb=short --cov=src --cov-report=term-missing --cov-fail-under=95"
 
 [tool.coverage.run]
 source = ["src", "config"]
-omit = ["tests/*", "src/main.py"]
+omit = ["tests/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 80
+fail_under = 95
