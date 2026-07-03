@@ -167,6 +167,8 @@ Examples:
                         help="Export JSON report to reports/")
     parser.add_argument("--csv", action="store_true",
                         help="Also export a CSV summary to reports/")
+    parser.add_argument("--html", action="store_true",
+                        help="Also export a styled HTML triage report to reports/")
     parser.add_argument("--config", default="config/config.json",
                         help="Path to config file")
 
@@ -220,7 +222,7 @@ Examples:
                              scorer=scorer)
         results.append(result)
 
-    if args.export or args.file or args.csv:
+    if args.export or args.file or args.csv or args.html:
         if args.export or args.file:
             try:
                 report_path = reporter.export(results)
@@ -233,6 +235,12 @@ Examples:
                 print(f"\n[+] CSV exported:    {csv_path}")
             except OSError as e:
                 print(f"[!] Could not write CSV: {e}")
+        if args.html:
+            try:
+                html_path = reporter.export_html(results)
+                print(f"\n[+] HTML exported:   {html_path}")
+            except OSError as e:
+                print(f"[!] Could not write HTML: {e}")
 
     if len(results) > 1:
         print(f"\n{'='*55}")

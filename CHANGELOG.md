@@ -4,6 +4,27 @@ All notable changes to this project will be documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [1.2.0] - 2026-07-03
+
+### Added
+- Styled HTML triage report export via `--html`: verdict summary cards
+  (MALICIOUS / SUSPICIOUS / BENIGN) and a score-sorted result table with
+  URL, verdict, confidence, redirect hops, fired indicators, VirusTotal
+  hits, domain age and MITRE tags
+- HTML escaping for attacker-controlled report content (URLs, indicator
+  names) to prevent script injection in generated reports
+- 9 new tests covering the HTML export, the `--html` CLI path including
+  OSError handling, and a regression test for indicator filtering
+
+### Changed
+- README: repositioned as part of a detection engineering portfolio,
+  added triage report screenshot
+
+### Fixed
+- Indicators column lists only fired boolean indicators instead of all
+  numeric feature values
+
+---
 
 ## [1.1.0] - 2026-05-13
 

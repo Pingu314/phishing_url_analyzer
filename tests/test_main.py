@@ -327,6 +327,29 @@ class TestMain:
             main()
         mock_rg.return_value.export_csv.assert_called_once()
 
+    def test_html_flag_calls_export_html(self, tmp_path):
+        result = self._make_result()
+        with patch("sys.argv", ["phishing-analyze", "-u", "http://evil.com",
+                                "--html",
+                                "--config", str(tmp_path / "noconfig.json")]), \
+             patch("src.main.analyze_url", return_value=result), \
+             patch("src.main.ReportGenerator") as mock_rg:
+            mock_rg.return_value.export_html.return_value = str(tmp_path / "r.html")
+            main()
+        mock_rg.return_value.export_html.assert_called_once()
+
+    def test_html_flag_oserror_is_handled(self, tmp_path, capsys):
+        result = self._make_result()
+        with patch("sys.argv", ["phishing-analyze", "-u", "http://evil.com",
+                                "--html",
+                                "--config", str(tmp_path / "noconfig.json")]), \
+             patch("src.main.analyze_url", return_value=result), \
+             patch("src.main.ReportGenerator") as mock_rg:
+            mock_rg.return_value.export_html.side_effect = OSError("disk full")
+            main()
+        captured = capsys.readouterr()
+        assert "Could not write HTML" in captured.out
+
     def test_batch_summary_printed_for_multiple_urls(self, tmp_path, capsys):
         url_file = tmp_path / "urls.txt"
         url_file.write_text("http://evil.com\nhttp://other.com\n")

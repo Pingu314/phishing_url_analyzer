@@ -5,10 +5,14 @@
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A SOC triage tool that analyzes URLs for phishing indicators, enriches them
-with threat intelligence and maps findings to MITRE ATT&CK techniques.
-Built as part of a SOC analyst portfolio - demonstrating Tier-1 triage
-workflows in code.
+A detection and triage tool that analyzes URLs for phishing indicators,
+enriches them with threat intelligence and maps findings to MITRE ATT&CK
+techniques. Built as part of a detection engineering portfolio -
+demonstrating triage workflows in code. Phishing URLs are the entry point
+of most card fraud, which is where I spent two years working 24/7 fraud
+detection at a Swiss payment services provider.
+
+![Analysis report](docs/screenshot_report.png)
 
 ---
 
@@ -50,7 +54,7 @@ python -m src.main -u "http://paypa1.com/verify"   # equivalent
 phishing-analyze -f data/sample_urls/urls.txt
 
 # With all options
-phishing-analyze -u "http://suspicious-site.com/login" --verbose --export --csv
+phishing-analyze -u "http://suspicious-site.com/login" --verbose --export --csv --html
 ```
 
 | Flag | Description |
@@ -60,6 +64,7 @@ phishing-analyze -u "http://suspicious-site.com/login" --verbose --export --csv
 | `-v` / `--verbose` | Show full feature dict and intel output |
 | `--export` | Export JSON report to `reports/` |
 | `--csv` | Export CSV summary to `reports/` |
+| `--html` | Export styled HTML triage report to `reports/` |
 | `--config PATH` | Path to config file (default: `config/config.json`) |
 
 ---
@@ -132,8 +137,7 @@ RiskScorer                ──►  score, verdict, confidence, breakdown
 map_to_mitre              ──►  [T1566.002, T1027, T1583.006, ...]
     │
     ▼
-ReportGenerator           ──►  reports/report_YYYYMMDD_HHMMSS.json / .csv
-```
+ReportGenerator           ──►  reports/report_YYYYMMDD_HHMMSS.json / .csv / .html```
 
 ---
 
@@ -142,29 +146,29 @@ ReportGenerator           ──►  reports/report_YYYYMMDD_HHMMSS.json / .csv
 ```
 phishing_url_analyzer/
 ├── src/
-│   ├── main.py                # CLI entrypoint (phishing-analyze)
-│   ├── url_extractor.py       # Feature extraction (25+ signals)
-│   ├── risk_scorer.py         # Weighted scoring + confidence
-│   ├── threat_intel.py        # VirusTotal · URLScan.io · WHOIS
-│   ├── redirect_follower.py   # Redirect chain follower
-│   ├── report_generator.py    # JSON + CSV export
-│   └── mitre_mapper.py        # MITRE ATT&CK tag mapper
+│   ├── main.py                     # CLI entrypoint (phishing-analyze)
+│   ├── url_extractor.py            # Feature extraction (25+ signals)
+│   ├── risk_scorer.py              # Weighted scoring + confidence
+│   ├── threat_intel.py             # VirusTotal · URLScan.io · WHOIS
+│   ├── redirect_follower.py        # Redirect chain follower
+│   ├── report_generator.py         # JSON + CSV + HTML export
+│   └── mitre_mapper.py             # MITRE ATT&CK tag mapper
 ├── config/
-│   ├── settings.py            # All weights, lists, thresholds
-│   └── config.json.example    # API key template
+│   ├── settings.py                 # All weights, lists, thresholds
+│   └── config.json.example         # API key template
 ├── tests/
-│   ├── conftest.py            # Shared pytest fixtures
-│   ├── test_url_extractor.py  # URLFeatureExtractor (33 tests)
-│   ├── test_risk_scorer.py    # RiskScorer (18 tests)
-│   ├── test_redirect_follower.py # RedirectFollower (11 tests)
-│   ├── test_mitre_mapper.py   # map_to_mitre (13 tests)
-│   ├── test_threat_intel.py   # ThreatIntelEnricher (17 tests)
-│   ├── test_report_generator.py  # ReportGenerator (4 tests)
-│   └── test_main.py           # load_config, analyze_url, main (22 tests)
+│   ├── conftest.py                 # Shared pytest fixtures
+│   ├── test_url_extractor.py       # URLFeatureExtractor (33 tests)
+│   ├── test_risk_scorer.py         # RiskScorer (18 tests)
+│   ├── test_redirect_follower.py   # RedirectFollower (11 tests)
+│   ├── test_mitre_mapper.py        # map_to_mitre (13 tests)
+│   ├── test_threat_intel.py        # ThreatIntelEnricher (17 tests)
+│   ├── test_report_generator.py    # ReportGenerator (9 tests)
+│   └── test_main.py                # load_config, analyze_url, main (24 tests)
 ├── data/
 │   └── sample_urls/
-│       └── urls.txt           # Sample URLs for batch testing
-└── reports/                   # Generated reports (gitignored)
+│       └── urls.txt                # Sample URLs for batch testing
+└── reports/                        # Generated reports (gitignored)
 ```
 
 ---
@@ -234,8 +238,8 @@ database are submitted for future analysis.
 
 ## Disclaimer
 
-This tool is built for educational and portfolio purposes as part of a SOC
-analyst learning path (CompTIA Security+, TryHackMe SOC Level 1).
+This tool is built for educational and portfolio purposes as part of a
+security learning path (CompTIA Security+, TryHackMe SOC Level 1).
 
 Do not use this tool to analyze URLs you do not have permission to test.
 Results are heuristic - this is not a replacement for production security tooling.
